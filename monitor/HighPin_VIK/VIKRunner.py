@@ -34,7 +34,7 @@ def run_test():
             for test_file_case in test_value:
                 # 取步骤的title当做测试方法名,并将这个测试方法加入到Test_Suite当中
                 test_suite_for_file.addTest(test_file_class(test_file_case['title']))
-            # 将每个文件的TestSuite加入到单个文化部的TestSuite当中
+            # 将每个文件的TestSuite加入到单个的TestSuite当中
             test_suite_for_single_file.addTests(test_suite_for_file)
         # 将每个文件的TestSuite加入整个TestSuite当中
         test_suite_for_all_file.addTests(test_suite_for_single_file)
@@ -51,7 +51,7 @@ def run_test():
         # 获取测试的状态参数
         error_count = result.error_count
         failure_count = result.failure_count
-        SendEmail.send_report(os.path.join(os.path.abspath('.'), 'monitor', 'HighPin_VIK', 'configure.conf'), error_count, failure_count)
+        SendEmail.send_report(os.path.join(os.path.abspath('.'), 'monitor', 'HighPin_VIK', 'mail_configure.conf'), error_count, failure_count)
         return True
     else:
         return False
