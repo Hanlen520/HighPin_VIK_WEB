@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div id="container" style="height: 640px;margin:45px 0 20px 20.5%;" class="col-md-9"></div>
+    <script>
+        var chart = Highcharts.chart('container', {
+            chart: {
+                type: 'bar'
+            },
+            title: {
+                text: '最近一周线上功能异常统计'
+            },
+            subtitle: {
+                text: '统计前五个错误最多的模块'
+            },
+            xAxis: {
+{#                categories: ['Africa', 'America', 'Asia', 'Europe', 'Oceania'],#}
+                categories: {{ model_list | safe }},
+                title: {
+                    text: null
+                }
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: '异常数量 (单位:个)',
+                    align: 'high'
+                },
+                labels: {
+                    overflow: 'justify'
+                }
+            },
+            tooltip: {
+                valueSuffix: ' 个'
+            },
+            plotOptions: {
+                bar: {
+                    dataLabels: {
+                        enabled: true
+                    }
+                }
+            },
+            legend: {
+                layout: 'vertical',
+                align: 'right',
+                verticalAlign: 'top',
+                x: -5,
+                y: 255,
+                floating: true,
+                borderWidth: 1,
+                backgroundColor: ((Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'),
+                shadow: true
+            },
+            credits: {
+                enabled: false
+            },
+            series: [{
+                name: '502错误',
+                data: {{ list_502 }}
+            }, {
+                name: '404错误',
+                data: {{ list_404 }}
+            }, {
+                name: '超时错误',
+                data: {{ list_timeout }}
+            }, {
+                name: '其他错误',
+                data: {{ list_unknown }}
+            }]
+        });
+    </script>
+{% endblock %}

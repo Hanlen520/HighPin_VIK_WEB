@@ -7,6 +7,7 @@ urlpatterns = [
     url(r'^items_list/', views.get_new_report_items, name='items_list'),
     url(r'^display_chart/', views.display_chart, name='display_chart'),
     url(r'^cases_list/', views.cases_list, name='cases_list'),
+    url(r'^display_error_column/', views.display_error_column, name='display_error_column'),
     url(r'^upload_case/', views.upload_case, name='upload_case'),
     url(r'^delete_case/', views.delete_case, name='delete_case'),
     url(r'^test_operate/', views.test_operate, name='test_operate'),

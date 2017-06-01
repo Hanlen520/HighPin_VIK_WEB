@@ -5,7 +5,7 @@ import django   #这里更坑
 django.setup()
 
 from monitor.HighPin_VIK.WriteReportToDB.spider_report import get_report_info, get_report_item
-from monitor.models import Report, Item
+from monitor.models import Report, Item, Item_Error
 
 
 def save_several_report_title():
@@ -28,7 +28,8 @@ def save_several_report_title():
 
 def save_report_title():
     # 获取报告存放路径并获取报告列表
-    project_path = os.path.abspath('.')
+    # project_path = os.path.abspath('.')
+    project_path = os.path.abspath('../../../')
     report_folder_path = os.path.join(project_path, 'monitor', 'static', 'report')
     print(report_folder_path)
     report_list = os.listdir(report_folder_path)
@@ -54,7 +55,7 @@ def save_report_title():
 
 
 def save_report_item(report, last_report_path, record_date):
-    item_dict = get_report_item(last_report_path)
+    item_dict, error_dict = get_report_item(last_report_path)
     for model_name, error_flag in item_dict.items():
         # print(model_name.split('.')[-1], error_flag)
         report_item = {
@@ -63,11 +64,29 @@ def save_report_item(report, last_report_path, record_date):
             'error_flag': error_flag,
             'report_id': report.id  # 外键关联保存
         }
-        # print(report_item)
 
         item = Item.objects.create(**report_item)
         item.save()
 
+        # 保存Error的item
+        if model_name in error_dict:
+            save_error_item(item, error_dict[model_name], record_date)
 
+
+def save_error_item(item, error_item_dict, record_date):
+    # 保存错误的测试条目,并保存错误类型
+    for error_item_key, error_item_value in error_item_dict.items():
+        error_item = {
+            'model_name': item.model_name,
+            'item_name': error_item_key,
+            'error_type_flag': error_item_value,
+            'record_date': record_date,
+            'item_id': item.id
+        }
+
+        item_error = Item_Error.objects.create(**error_item)
+        item_error.save()
+
+# 写入数据库测试
 if __name__ == '__main__':
     save_report_title()

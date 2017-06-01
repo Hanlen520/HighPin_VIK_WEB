@@ -1,5 +1,5 @@
 import os
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 
 def get_report_info(last_report_path):
@@ -43,21 +43,44 @@ def get_report_item(last_report_path):
         report_content = f.read()
 
     item_dict = dict()
+    error_dict = dict()
 
     soup = BeautifulSoup(report_content, 'lxml')
     item_list = soup.select('tr')
     for item in item_list:
         if 'class' in item.attrs:
             if item.attrs['class'] == ['passClass']:
-                # print(item.td.string)
                 item_dict[item.td.string] = 0
             if item.attrs['class'] == ['errorClass']:
-                # print(item.td.string)
                 item_dict[item.td.string] = 1
+                # 捕捉带有Error的异常信息,通过兄弟节点获取异常信息 (前方高能预警!!!)
+                error_item_dict = dict()
+                # 获取当前节点的兄弟节点
+                for error_item in item.next_siblings:
+                    # 判断元素是不是Tag类型,如果是则进行边界判断,避免打印别的模块的异常信息
+                    if isinstance(error_item, Tag):
+                        # 在遍历报告时如果样式出现3个中任意1个.则break,代表一条用例中的所有功能项已经遍历完毕
+                        if error_item.attrs['class'][0] in ['passClass', 'errorClass', 'failClass']:
+                            break
+                        # 需要排除class样式为hiddenRow的功能项(hiddenRow代表已经通过的功能项)
+                        if error_item.attrs['class'] != ['hiddenRow']:
+                            error_item_name = error_item.select('.testcase')[0].text
+                            error_item_content = error_item.select('.popup_window pre')[0].text
+
+                            if 'HTTPError: 502 Server Error: Bad Gateway' in error_item_content:
+                                error_item_dict[error_item_name] = 1
+                            elif 'HTTPError: 404 Client Error: Not Found for url' in error_item_content:
+                                error_item_dict[error_item_name] = 2
+                            elif 'ReadTimeout: HTTPConnectionPool' in error_item_content:
+                                error_item_dict[error_item_name] = 3
+                            else:
+                                error_item_dict[error_item_name] = 4    # 未知错误
+
+                error_dict[item.td.string] = error_item_dict
+
             if item.attrs['class'] == ['failClass']:
-                # print(item.td.string)
                 item_dict[item.td.string] = 2
-    return item_dict
+    return item_dict, error_dict
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, redirect
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from monitor.models import Report, Item, Case
+from monitor.models import Report, Item, Item_Error, Case
 from monitor.HighPin_VIK import VIKRunner
 from monitor.HighPin_VIK.GetNewCookie import GetUserCookie
 from monitor.HighPin_VIK.WriteReportToDB import handle_model
@@ -20,6 +20,7 @@ refresh_cookie_run_schedule = None
 def index(request):
     report_name = request.GET.get('report_name')
     if report_name is None:
+        # 获取表中存放的报告路径
         report_name = Report.objects.first()
         if report_name is None:
             return render(request, template_name='index.html')
@@ -116,6 +117,8 @@ def get_new_report_items(request):
         new_report_date = new_report.create_date
         # 按照最新的一天的报告查询(使用extra方法按照model_name排序)
         new_report_items = Item.objects.filter(report_id=new_report.id).extra(order_by=['model_name'])
+        # 打印SQL语句用于调试
+        # print(new_report_items.query)
 
     return render(request, template_name='items_list.html', context={
         'new_report_items': new_report_items,
@@ -132,18 +135,15 @@ def display_chart(request):
     begin_date = end_date - timedelta(days=6)
     # 根据起止时间和业务流程名称获取数据(范围查询:xxxx_range=[x,x])
     filter_items = Item.objects.filter(record_date__range=[begin_date, end_date]).filter(model_name=model_name)
+    # 打印SQL语句用于调试
+    print(filter_items.query)
 
     day_list = list()
     day_str_list = list()
     for day in range((end_date - begin_date).days + 1):
         day = begin_date + timedelta(days=day)
-        day_list.append(day)   # 需要将日期类型转成字符串
-        day_str_list.append(day.strftime('%Y-%m-%d'))
-
-    print(day_list)
-
-    # for q in filter_items:
-    #     print(q.id, q.model_name, q.error_flag, q.record_date)
+        day_list.append(day)
+        day_str_list.append(day.strftime('%Y-%m-%d'))  # 需要将日期类型转成字符串
 
     pass_num = 0
     error_num = 0
@@ -175,12 +175,71 @@ def display_chart(request):
     # print(error_list)
     # print(fail_list)
 
-    return render(request, template_name='chart.html', context={
+    return render(request, template_name='tendency_chart.html', context={
         'model_name': model_name,
         'day_str_list': day_str_list,
         'pass_list': pass_list,
         'error_list': error_list,
         'fail_list': fail_list
+    })
+
+
+def display_error_column(request):
+    model_list = list()
+    error_detail_list = list()
+
+    # 字符串转日期
+    end_date = datetime.today()
+    # 日期减法,获取7天前日期
+    begin_date = end_date - timedelta(days=6)
+
+    begin_date_str = begin_date.strftime('%Y-%m-%d')
+    end_date_str = end_date.strftime('%Y-%m-%d')
+
+    # 日期查询的时候必须用单引号~
+    query_sql = ''' 
+                    SELECT id, model_name, item_name, error_type_flag, COUNT(error_type_flag) error_flag_num
+                    FROM monitor_item_error
+                    WHERE record_date BETWEEN {0} AND {1}
+                    GROUP BY model_name, error_type_flag
+                    ORDER BY COUNT(model_name) DESC
+                '''.format("'" + begin_date_str + "'", "'" + end_date_str + "'")
+
+    for error_item in Item_Error.objects.raw(query_sql):
+        model_list.append(error_item.model_name)
+
+        error_detail_list.append({
+            'model_name': error_item.model_name,
+            'item_name': error_item.item_name,
+            'error_type_flag': error_item.error_type_flag,
+            'error_flag_num': error_item.error_flag_num
+        })
+
+    # 对列表中的模块名称进行去重,保留原来的排列顺序,并只取错误最多的前5个模块
+    model_list = sorted(set(model_list), key=model_list.index)[0:5]
+
+    print(model_list)
+
+    # 初始化异常统计列表长度
+    list_502 = [0] * 5
+    list_404 = [0] * 5
+    list_timeout = [0] * 5
+    list_unknown = [0] * 5
+
+    for model_index in range(len(model_list)):
+        for error_detail in error_detail_list:
+            if model_list[model_index] == error_detail['model_name']:
+                if error_detail['error_type_flag'] == 1: list_502[model_index] = error_detail['error_flag_num']
+                if error_detail['error_type_flag'] == 2: list_404[model_index] = error_detail['error_flag_num']
+                if error_detail['error_type_flag'] == 3: list_timeout[model_index] = error_detail['error_flag_num']
+                if error_detail['error_type_flag'] == 4: list_unknown[model_index] = error_detail['error_flag_num']
+
+    return render(request, template_name='error_type_chart.html', context={
+        'model_list': json.dumps(model_list),
+        'list_502': json.dumps(list_502),
+        'list_404': json.dumps(list_404),
+        'list_timeout': json.dumps(list_timeout),
+        'list_unknown': json.dumps(list_unknown)
     })
 
 
@@ -223,8 +282,7 @@ def cases_list(request):
         'case_list': case_list,
         'page_no': page_no,
         'num_pages': num_pages,
-        # 搜索条件
-        'case_name': case_name
+        'case_name': case_name  # 搜索条件
     })
 
 
@@ -262,7 +320,10 @@ def delete_case(request):
             os.remove(os.path.join(test_case_folder_path, test_case))
             # 删除数据库中的记录
             del_flag = del_case.delete()
-    # 显示删除标志位
+    # 如果用例已经在文件夹中删除,但是库中还留有记录,那么直接删除库中的记录
+    if del_flag is None:
+        del_case.delete()
+    # 显示删除标志位 -- 调试使用
     # print(del_flag[0])
 
     return redirect('/monitor/cases_list/')
@@ -273,8 +334,8 @@ def test_operate(request):
 
 
 def run_test(request):
-    VIKRunner.run_test()    # 运行测试
-    handle_model.save_report_title()    # 将测试报告的内容保存到DB
+    VIKRunner.run_test()  # 运行测试
+    handle_model.save_report_title()  # 将测试报告的内容保存到DB
     return render(request, template_name='test_operate.html', context={})
 
 
@@ -282,6 +343,7 @@ class SingletonDecorator:
     """
     单例模式装饰类
     """
+
     def __init__(self, parameter):
         self.parameter = parameter
         self.instance = None
@@ -297,6 +359,7 @@ class RefreshCookieScheduleTask:
     声明测试运行的任务计划类
     """
     refresh_cookie_schedule = BackgroundScheduler()
+
 
 refresh_cookie_scheduler_obj = SingletonDecorator(RefreshCookieScheduleTask)
 
@@ -320,7 +383,7 @@ def refresh_cookie(request):
         if task_flag['run_flag'] == 'start_run':
             refresh_cookie_run_schedule = refresh_cookie_scheduler_obj().refresh_cookie_schedule
             refresh_cookie_run_schedule.add_job(
-                task_run_refresh_cookie,        # 任务方法
+                task_run_refresh_cookie,  # 任务方法
                 trigger='cron',
                 second=cron_list[0],
                 minute=cron_list[1],
@@ -336,7 +399,7 @@ def refresh_cookie(request):
         # 1.修改当前任务的执行周期
         # 2.停止当前任务
         if task_flag['run_flag'] == 'start_run':
-            refresh_cookie_run_schedule.resume()        # 计划任务恢复-对应任务暂停
+            refresh_cookie_run_schedule.resume()  # 计划任务恢复-对应任务暂停
             refresh_cookie_run_schedule.reschedule_job(
                 job_id='schedule_refresh_cookie',
                 trigger='cron',
@@ -348,7 +411,7 @@ def refresh_cookie(request):
                 month=cron_list[5]
             )
         elif task_flag['run_flag'] == 'stop_run':
-            refresh_cookie_run_schedule.pause()         # 计划任务暂停
+            refresh_cookie_run_schedule.pause()  # 计划任务暂停
 
     return render(request, template_name='test_operate.html', context={})
 
@@ -358,6 +421,7 @@ class TestScheduleTask:
     声明测试运行的任务计划类
     """
     test_schedule = BackgroundScheduler()
+
 
 test_scheduler_obj = SingletonDecorator(TestScheduleTask)
 
@@ -378,13 +442,13 @@ def timing_task(request):
         else:
             # 如果为空则默认以每隔20分钟运行一次的规则运行
             cron_list = ['*', '*/20', '*', '*', '*', '*']
-    global test_run_schedule     # 使用全局变量
+    global test_run_schedule  # 使用全局变量
     if test_run_schedule is None:
         # 如果计划任务还没有启动,则启动计划任务
         if task_flag['run_flag'] == 'start_run':
             test_run_schedule = test_scheduler_obj().test_schedule
             test_run_schedule.add_job(
-                task_run_test,      # 任务方法
+                task_run_test,  # 任务方法
                 trigger='cron',
                 second=cron_list[0],
                 minute=cron_list[1],
@@ -400,7 +464,7 @@ def timing_task(request):
         # 1.修改当前任务的执行周期
         # 2.停止当前任务
         if task_flag['run_flag'] == 'start_run':
-            test_run_schedule.resume()          # 计划任务恢复-对应任务暂停
+            test_run_schedule.resume()  # 计划任务恢复-对应任务暂停
             test_run_schedule.reschedule_job(
                 job_id='schedule_test',
                 trigger='cron',
@@ -412,7 +476,7 @@ def timing_task(request):
                 month=cron_list[5]
             )
         elif task_flag['run_flag'] == 'stop_run':
-            test_run_schedule.pause()           # 计划任务暂停
+            test_run_schedule.pause()  # 计划任务暂停
 
     return render(request, template_name='test_operate.html', context={})
 

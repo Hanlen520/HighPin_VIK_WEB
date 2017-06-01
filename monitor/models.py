@@ -30,6 +30,20 @@ class Item(models.Model):
         ordering = ['-report']  # 按照外键倒排
 
 
+class Item_Error(models.Model):
+    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    model_name = models.CharField('模块名称', max_length=300)
+    item_name = models.CharField('条目名称', max_length=300)
+    error_type_flag = models.IntegerField('错误类型')
+    record_date = models.DateField('记录时间')
+
+    def __str__(self):
+        return self.item_name
+
+    class Meta:
+        ordering = ['-item']    # 按照外键倒排
+
+
 class Case(models.Model):
     case_name = models.CharField('用例名称', max_length=300)
     case_time = models.DateTimeField('上传时间')

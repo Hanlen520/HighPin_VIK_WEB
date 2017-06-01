@@ -66,7 +66,6 @@ def send_email_html_content(parse_info, flag):
     mst_text = MIMEText(lite_report_html_content, _subtype='html', _charset='UTF-8')
     msg.attach(mst_text)
 
-
     # 添加邮件标题
     if flag:
         msg['Subject'] = Header(subject, 'UTF-8')
