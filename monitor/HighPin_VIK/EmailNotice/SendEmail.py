@@ -12,6 +12,11 @@ from monitor.HighPin_VIK.ReportHandler.ReportHandler import report_compress, rep
 
 
 def read_config(conf_path):
+    """
+    :description: 读取配置文件,并返回配置文件解析
+    :param conf_path: 
+    :return: 
+    """
     file_path_name = conf_path
     parse = configparser.ConfigParser()
     parse.read(file_path_name, encoding='UTF-8')
