@@ -3,12 +3,12 @@
 {% block content %}
     <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
         <h3 class="sub-header">历史记录</h3>
-        <form class="form-inline" action="{% url 'monitor:reports_list' %}" method="post">
+        <form class="form-inline" action="{% url 'monitor:aggregate_list' %}" method="post">
             {# 提交表单需要使用csrf_token #}
             {% csrf_token %}
             <div class="form-group">
                 <label>ID</label>
-                <input type="text" class="form-control" id="report_id" name="report_id" value="{{ report_id }}">
+                <input type="text" class="form-control" id="aggregate_id" name="aggregate_id" value="{{ aggregate_id }}">
             </div>
 
             <div class="form-group">
@@ -38,35 +38,38 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>报告名称</th>
-                        <th>创建日期</th>
                         <th>创建时间</th>
                         <th>是否出错</th>
+                        <th>成功总数</th>
+                        <th>错误总数</th>
+                        <th>失败总数</th>
                         <th>查看</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for report_item in report_list %}
-                        {% if report_item.is_error %}
+                    {% for aggregate_item in aggregates_list %}
+                        {% if aggregate_item.is_error %}
                             <tr class="danger">
-                                <td>{{ report_item.id }}</td>
-                                <td>{{ report_item.report_name }}</td>
-                                <td>{{ report_item.create_date|date:"Y年m月d日" }}</td>
-                                <td>{{ report_item.create_time|date:" H:i:s" }}</td>
+                                <td>{{ aggregate_item.id }}</td>
+                                <td>{{ aggregate_item.batch_run_time|date:'Y-m-d H:i:s' }}</td>
                                 <td>有</td>
+                                <td>{{ aggregate_item.pass_total_num }}</td>
+                                <td>{{ aggregate_item.error_total_num }}</td>
+                                <td>{{ aggregate_item.failure_total_num }}</td>
                                 <td>
-                                    <a href="../?report_name={{ report_item.report_name }}" class="glyphicon glyphicon-zoom-in" title="查看"></a>
+                                    <a href="../?aggregate_id={{ aggregate_item.id }}" class="glyphicon glyphicon-zoom-in" title="查看"></a>
                                 </td>
                             </tr>
                         {% else %}
                             <tr class="success">
-                                <td>{{ report_item.id }}</td>
-                                <td>{{ report_item.report_name }}</td>
-                                <td>{{ report_item.create_date|date:"Y年m月d日" }}</td>
-                                <td>{{ report_item.create_time|date:" H:i:s" }}</td>
+                                <td>{{ aggregate_item.id }}</td>
+                                <td>{{ aggregate_item.batch_run_time|date:'Y-m-d H:i:s' }}</td>
                                 <td>无</td>
+                                <td>{{ aggregate_item.pass_total_num }}</td>
+                                <td>{{ aggregate_item.error_total_num }}</td>
+                                <td>{{ aggregate_item.failure_total_num }}</td>
                                 <td>
-                                    <a href="../?report_name={{ report_item.report_name }}" class="glyphicon glyphicon-zoom-in" title="查看"></a>
+                                    <a href="../?aggregate_id={{ aggregate_item.id }}" class="glyphicon glyphicon-zoom-in" title="查看"></a>
                                 </td>
                             </tr>
                         {% endif %}
@@ -91,7 +94,7 @@
             currentPage: {{ page_no }},
             totalPages: {{ num_pages }},
             pageUrl: function(type, page, current) {
-                 return '?page_no=' + page + '&report_id=' + $('#report_id').val() + '&create_date=' + $('#create_date').val() + '&is_error=' + $('#is_error').val();
+                 return '?page_no=' + page + '&aggregate_id=' + $('#aggregate_id').val() + '&create_date=' + $('#create_date').val() + '&is_error=' + $('#is_error').val();
             },
             size:'normal',
             alignment:'right'

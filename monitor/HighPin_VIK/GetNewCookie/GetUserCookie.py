@@ -1,17 +1,21 @@
 import os
 import re
 import requests
+from monitor.HighPin_VIK.LogModule import LogConfigure
 
 
 def get_new_cookie():
     c_cookie = requests.get('http://webapi.highpin.cn/api/SeekerToken', params={'userid': '8420579'})
-    print('C端Cookie:', c_cookie.text)
+    # print('C端Cookie:', c_cookie.text)
+    LogConfigure.logging.info('获取C端Cookie: ' + c_cookie.text)
 
     h_cookie = requests.get('http://webapi.highpin.cn/api/HunterToken', params={'userid': '42135'})
-    print('H端Cookie:', h_cookie.text)
+    # print('H端Cookie:', h_cookie.text)
+    LogConfigure.logging.info('获取H端Cookie: ' + h_cookie.text)
 
     b_cookie = requests.get('http://webapi.highpin.cn/api/usertoken/GetRecruiterToken', params={'userid': '58208', 'accountName': 'highpin_ci@126.com'})
-    print('B端Cookie:', b_cookie.text)
+    # print('B端Cookie:', b_cookie.text)
+    LogConfigure.logging.info('获取B端Cookie: ' + b_cookie.text)
 
     # 去掉获取token的所有引号
     c_cookie = c_cookie.text[1: -1]
@@ -30,15 +34,36 @@ def search_cookie(case_path):
     for root, dirs, files in os.walk(case_path):
         for file in files:
             if file.endswith('.xml'):
-                if file.startswith('Test_C'):
+                if file.startswith('Test_C端'):
                     file_path = os.path.join(root, file)
                     modify_cookie(file_path, c_cookie, c_cookie_regex)
-                if file.startswith('Test_H'):
+                if file.startswith('Test_H端'):
                     file_path = os.path.join(root, file)
                     modify_cookie(file_path, h_cookie, h_cookie_regex)
-                if file.startswith('Test_B'):
+                if file.startswith('Test_B端'):
                     file_path = os.path.join(root, file)
                     modify_cookie(file_path, b_cookie, b_cookie_regex)
+                if file.startswith('Test_J端_B端'):
+                    file_path = os.path.join(root, file)
+                    modify_cookie(file_path, b_cookie, b_cookie_regex)
+                if file.startswith('Test_J端_H端'):
+                    file_path = os.path.join(root, file)
+                    modify_cookie(file_path, h_cookie, h_cookie_regex)
+                if file.startswith('Test_J端_C端'):
+                    file_path = os.path.join(root, file)
+                    modify_cookie(file_path, c_cookie, c_cookie_regex)
+                if file.startswith('Test_W端_B端'):
+                    file_path = os.path.join(root, file)
+                    modify_cookie(file_path, b_cookie, b_cookie_regex)
+                if file.startswith('Test_W端_H端'):
+                    file_path = os.path.join(root, file)
+                    modify_cookie(file_path, h_cookie, h_cookie_regex)
+                if file.startswith('Test_W端_C端'):
+                    file_path = os.path.join(root, file)
+                    modify_cookie(file_path, c_cookie, c_cookie_regex)
+                if file.startswith('Test_M端'):
+                    file_path = os.path.join(root, file)
+                    modify_cookie(file_path, c_cookie, c_cookie_regex)
 
 
 def modify_cookie(xml, new_cookie, cookie_regex):

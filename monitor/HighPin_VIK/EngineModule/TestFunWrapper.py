@@ -31,12 +31,14 @@ def test_wrapper_fun(self):
     if resp.status_code == requests.codes.ok:
         resp_content = resp.content.decode('utf-8').strip()
         # 显示请求的response(可注释掉)
-        # logging.info(resp_content.replace('\r\n', ''))
+        # LogConfigure.logging.info(resp_content.replace('\r\n', ''))
         # 加入验证方法
         VerifyFun.verify_function(self, resp_content)
         LogConfigure.logging.info('验证接口: ' + self.title_list[self.__class__.index] + '--测试通过,返回状态码: ' + str(resp.status_code))
     else:
-        LogConfigure.logging.info('验证接口: ' + self.title_list[self.__class__.index] + '--返回状态码: ' + str(resp.status_code))
+        resp_content = resp.content.decode('utf-8').strip()
+        LogConfigure.logging.info('验证接口: ' + self.title_list[self.__class__.index] + '--测试失败,返回状态码: ' + str(resp.status_code))
+        LogConfigure.logging.info('验证接口: ' + self.title_list[self.__class__.index] + '--请求返回: ' + resp_content)
         resp.raise_for_status()
 
     # 如果返回值不为None,则执行关联参数的替换操作

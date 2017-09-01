@@ -4,45 +4,55 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'HighPin_VIK_WEB.settings'
 import django   #这里更坑
 django.setup()
 
-from monitor.HighPin_VIK.WriteReportToDB.spider_report import get_report_info, get_report_item
-from monitor.models import Report, Item, Item_Error
+import datetime
+from monitor.HighPin_VIK.WriteReportToDB.spider_report import get_report_detail_info, get_report_item, get_report_note
+from monitor.models import Aggregate, Report, Item, Item_Error
 
 
-def save_several_report_title():
-    # 获取存放报告的路径
-    project_path = os.path.abspath('.')
-    report_folder_path = os.path.join(project_path, 'monitor', 'static', 'report')
-    print(report_folder_path)
-    report_list = os.listdir(project_path)
-    # 批量导入报告
-    for report in report_list:
-        last_report_path = os.path.join(project_path, report)
-        report_record = get_report_info(last_report_path)
+def save_report_batch_aggregate(save_report_list, batch_run_time):
+    # 统计的通过,错误,失败的总数
+    pass_total_num = 0
+    error_total_num = 0
+    failure_total_num = 0
 
-        report = Report.objects.create(**report_record)
-        report.save()
+    for report in save_report_list:
+        report_statistics_num = get_report_note(report['save_report_full_name'])
+        pass_total_num += report_statistics_num['pass_num']
+        error_total_num += report_statistics_num['error_num']
+        failure_total_num += report_statistics_num['failure_num']
 
-        record_date = report_record['create_date']
-        save_report_item(report, last_report_path, record_date)
+    is_error = False
+    if error_total_num + failure_total_num > 0:
+        is_error = True
+
+    report_aggregate_info = {
+        'batch_run_time': batch_run_time,
+        'create_date': datetime.datetime.now().strftime('%Y-%m-%d'),
+        'is_error': is_error,
+        'pass_total_num': pass_total_num,
+        'error_total_num': error_total_num,
+        'failure_total_num': failure_total_num
+    }
+    # 保存汇总数据
+    aggregate = Aggregate.objects.create(**report_aggregate_info)
+    aggregate.save()
+
+    # 保存报告数据
+    for report in save_report_list:
+        save_report_title(
+            aggregate,
+            report['save_report_full_name'],
+            report['host_client'],
+            report['host_key_ip'],
+            report['batch_run_time']
+        )
 
 
-def save_report_title():
-    # 获取报告存放路径并获取报告列表
-    # project_path = os.path.abspath('.')
-    project_path = os.path.abspath('../../../')
-    report_folder_path = os.path.join(project_path, 'monitor', 'static', 'report')
-    print(report_folder_path)
-    report_list = os.listdir(report_folder_path)
-
-    # 对报告列表进行排序
-    report_list = sorted(report_list)
-
-    last_report_path = os.path.join(report_folder_path, report_list[-1])
-    print(last_report_path)
-
+def save_report_title(aggregate, save_report_full_name, host_key_client, host_key_ip, batch_run_time):
     # 获取最新的报告信息
-    report_record = get_report_info(last_report_path)
-    print(report_record)
+    report_record = get_report_detail_info(save_report_full_name, host_key_client, host_key_ip, batch_run_time)
+    report_record['aggregate_id'] = aggregate.id
+    # print(report_record)
 
     # 定义最新报告,并存入DB
     report = Report.objects.create(**report_record)
@@ -51,11 +61,11 @@ def save_report_title():
     # 获取报告日期
     record_date = report_record['create_date']
     # 将报告中的内容保存到Item表
-    save_report_item(report, last_report_path, record_date)
+    save_report_item(report, save_report_full_name, record_date)
 
 
-def save_report_item(report, last_report_path, record_date):
-    item_dict, error_dict = get_report_item(last_report_path)
+def save_report_item(report, save_report_full_name, record_date):
+    item_dict, error_dict = get_report_item(save_report_full_name)
     for model_name, error_flag in item_dict.items():
         # print(model_name.split('.')[-1], error_flag)
         report_item = {
@@ -81,7 +91,7 @@ def save_error_item(item, error_item_dict, record_date):
             'item_name': error_item_key,
             'error_type_flag': error_item_value,
             'record_date': record_date,
-            'item_id': item.id
+            'item_id': item.id  # 外键关联保存
         }
 
         item_error = Item_Error.objects.create(**error_item)
@@ -89,4 +99,5 @@ def save_error_item(item, error_item_dict, record_date):
 
 # 写入数据库测试
 if __name__ == '__main__':
-    save_report_title()
+    now_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    save_report_title(os.path.join(os.path.abspath('.'), 'monitor', 'static', 'report', now_time))

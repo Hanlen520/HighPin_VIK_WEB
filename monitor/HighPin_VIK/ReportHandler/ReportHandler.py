@@ -5,10 +5,13 @@ import zipfile
 
 def report_compress(report_path):
     # 对报告进行压缩
-    report_name = report_path.split(os.sep)[-1]
-    report_folder_path = os.path.abspath(os.path.join('monitor', 'static', 'zip'))
-    f = zipfile.ZipFile(report_folder_path + os.sep + report_name + '.zip', 'w', zipfile.ZIP_DEFLATED)
-    f.write(report_path)
+    report_folder = report_path.split(os.sep)[-1]
+    report_folder_zip_path = os.path.abspath(os.path.join('monitor', 'static', 'zip'))
+    f = zipfile.ZipFile(report_folder_zip_path + os.sep + report_folder + '.zip', 'w', zipfile.ZIP_DEFLATED)
+    # 获取被压缩文件下的所有报告
+    report_list = os.listdir(report_path)
+    for report in report_list:
+        f.write(report_path + os.sep + report)
     # 获取报告绝对路径
     zip_report_full_path = os.path.abspath(f.filename)
     f.close()

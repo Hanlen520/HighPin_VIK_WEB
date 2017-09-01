@@ -6,22 +6,21 @@ import json
 import datetime
 import unittest
 import HTMLTestRunner
-from monitor.HighPin_VIK.RunModeModule import LoadTestCase
+import HTMLTestReportCN
 from monitor.HighPin_VIK.EngineModule import CreateTestCaseModule
-from monitor.HighPin_VIK.EmailNotice import SendEmail
-from monitor.HighPin_VIK.WriteReportToDB import handle_model
 
 
-def run_test():
+def run_test(test_list, save_report_path, host_ip):
     """
     :description: 使用xml运行测试
+    :param test_list: 载入的测试用例(列表)
+    :param save_report_path: 报告存放路径
+    :param host_ip: 访问HOST的IP
     """
-    # 载入测试用例
-    total_test_list = LoadTestCase.load_test_case_for_xml()
-    # print(json.dumps(total_test_list, ensure_ascii=False))
+    # print(json.dumps(test_list, ensure_ascii=False))
     # 定义所有文件的TestSuite
     test_suite_for_all_file = unittest.TestSuite()
-    for test_file_dict in total_test_list:
+    for test_file_dict in test_list:
         # 定义单个文件的TestSuite
         test_suite_for_single_file = unittest.TestSuite()
         # 遍历每个文件
@@ -29,7 +28,7 @@ def run_test():
             # 定义每一个文件的的TestSuite
             test_suite_for_file = unittest.TestSuite()
             # 根据文件生成测试用例类
-            test_file_class = CreateTestCaseModule.create_test_case_class_for_file((test_key, test_value))
+            test_file_class = CreateTestCaseModule.create_test_case_class_for_file((test_key, test_value), host_ip)
             # 遍历每个类的测试步骤
             for test_file_case in test_value:
                 # 取步骤的title当做测试方法名,并将这个测试方法加入到Test_Suite当中
@@ -38,21 +37,31 @@ def run_test():
             test_suite_for_single_file.addTests(test_suite_for_file)
         # 将每个文件的TestSuite加入整个TestSuite当中
         test_suite_for_all_file.addTests(test_suite_for_single_file)
-
+    # 获取当前时间
     now_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    save_report_path = os.path.join(os.path.abspath('.'), 'monitor', 'static', 'report')
-    file_name = save_report_path + '/result_' + now_time + '.html'
-    with open(file_name, 'wb') as file_open:
-        runner = HTMLTestRunner.HTMLTestRunner(stream=file_open, title='测试结果')
+    # 建立报告完整路径
+    file_name = 'Result_' + host_ip + '_' + now_time + '.html'
+    report_full_name = save_report_path + os.sep + file_name
+    with open(report_full_name, 'wb') as file_open:
+        # runner = HTMLTestRunner.HTMLTestRunner(stream=file_open, title='测试结果')
+        runner = HTMLTestReportCN.HTMLTestRunner(stream=file_open, title='测试结果', tester=host_ip)
         # 运行测试
         result = runner.run(test_suite_for_all_file)
+
     # 注意文件路径
     if result is not None:
         # 获取测试的状态参数
+        success_count = result.success_count
         error_count = result.error_count
         failure_count = result.failure_count
-        SendEmail.send_report(os.path.join(os.path.abspath('.'), 'monitor', 'HighPin_VIK', 'mail_configure.conf'), error_count, failure_count)
-        return True
+        return {
+            'ip': host_ip,
+            'status': {'success': success_count, 'error': error_count, 'failure': failure_count},
+            'time': now_time,
+            'flag': True,
+            'report_full_name': report_full_name,
+            'report_name': file_name
+        }
     else:
-        return False
+        return {'flag': False}
 

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from monitor.HighPin_VIK.EmailNotice.CreateMailHTML import create_mail_template
 
 __author__ = 'Peng.Zhao'
 
@@ -23,10 +24,11 @@ def read_config(conf_path):
     return parse
 
 
-def send_email_html_content(parse_info, flag):
+def send_email_html_content(parse_info, host_check_status_dict):
     """
     :description: 编辑邮件正文,并且发送邮件
     :param parse_info: 邮箱配置信息
+    :param host_check_status_dict: 错误数量和通过数量
     :return:
     """
     # 确定报告存放路径
@@ -47,29 +49,33 @@ def send_email_html_content(parse_info, flag):
     msg = MIMEMultipart()
 
     # 添加邮件附件
-    report_attach_name = select_report(report_folder_path)
+    last_report_folder = select_last_report_folder(report_folder_path)
     # 获取报告的绝对路径
-    report_full_path = report_folder_path + os.sep + report_attach_name
+    report_full_path = report_folder_path + os.sep + last_report_folder
     # 对文件进行压缩
     zip_report_full_path = report_compress(report_full_path)
 
+    # 将压缩的报告文件夹,上传为邮件附件
     report_attach = open(zip_report_full_path, 'rb')
     mst_attach = MIMEText(report_attach.read(), 'base64', _charset='UTF-8')
     mst_attach['Content-Type'] = 'application/octet-stream'
     mst_attach['Content-Disposition'] = 'attachment; filename=' + zip_report_full_path.split(os.sep)[-1]
     msg.attach(mst_attach)
-
-    # 使用内嵌HTML的格式
-    # 对HTML报告进行过滤
-    lite_report_path = report_filter(report_full_path)
-    lite_report_handler = open(lite_report_path, mode='r', encoding='UTF-8')
-    lite_report_html_content = lite_report_handler.read()
-    # 修改邮件正文的字体大小
-    lite_report_html_content = lite_report_html_content.replace('font-size: 80%', 'font-size: 100%')
+    # 生成的HTML报告
+    doc = create_mail_template(host_check_status_dict)
 
     # 添加邮件正文(HTML)
-    mst_text = MIMEText(lite_report_html_content, _subtype='html', _charset='UTF-8')
+    mst_text = MIMEText(doc.getvalue(), _subtype='html', _charset='UTF-8')
+    # print(doc.getvalue())
     msg.attach(mst_text)
+
+    flag = True
+    # 判断当前所有服务器是否有错
+    for client_key, client_value in host_check_status_dict.items():
+        for host_item in client_value:
+            if host_item['status']['error'] > 0 or host_item['status']['failure'] > 0:
+                flag = False
+                break
 
     # 添加邮件标题
     if flag:
@@ -89,23 +95,20 @@ def send_email_html_content(parse_info, flag):
     smtp.quit()
 
 
-def select_report(file_path):
-    # 选择文件夹中最新的一份儿文件
+def select_last_report_folder(file_path):
+    # 选择文件夹中最新的一个子文件夹
     report_list = os.listdir(file_path)
     report_list = sorted(report_list)
     return report_list[-1]
 
 
-def send_report(configure_path, error_count, failure_count):
+def send_report(configure_path, host_check_status_dict):
     p_info = read_config(configure_path)
-    # send_email(p_info)
-    # 如果报告中没有出现错误,则flag置为True.
-    if error_count == 0 and failure_count == 0:
-        send_email_html_content(p_info, True)
-    else:
-        send_email_html_content(p_info, False)
+    send_email_html_content(p_info, host_check_status_dict)
+
 
 if __name__ == '__main__':
-    print(os.path.abspath('../../static/report'))
+    path = os.path.abspath('../../static/report')
+    print(select_last_report_folder(path))
     pass
 

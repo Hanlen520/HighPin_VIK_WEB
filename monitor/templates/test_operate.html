@@ -16,8 +16,9 @@
                 <h3 class="panel-title">更新Cookie</h3>
             </div>
             <div class="panel-body">
-                <button data-href="{% url 'monitor:refresh_cookie' %}" class="btn btn-primary" role="button" id="refresh_cookie_run_btn">保存运行</button>
-                <button data-href="{% url 'monitor:refresh_cookie' %}" class="btn btn-danger" role="button" id="refresh_cookie_stop_btn">点击终止</button>
+                <button data-href="{% url 'monitor:once_refresh_cookie' %}" class="btn btn-primary" role="button" id="refresh_cookie_once">立即更新</button>
+                <button data-href="{% url 'monitor:task_refresh_cookie' %}" class="btn btn-primary" role="button" id="refresh_cookie_run_btn">保存运行</button>
+                <button data-href="{% url 'monitor:task_refresh_cookie' %}" class="btn btn-danger" role="button" id="refresh_cookie_stop_btn">点击终止</button>
                 <div class="input-group" id="refresh_cookie_warp" style="float: right;width: 50%;">
                   <span class="input-group-addon" id="basic-addon3">crontab: 0 10 0 * * * </span>
                   <input type="text" class="form-control" id="refresh_cookie_cron" aria-describedby="basic-addon3">
@@ -31,11 +32,11 @@
                 <h3 class="panel-title">配置测试</h3>
             </div>
             <div class="panel-body">
-                <button data-href="{% url 'monitor:timing_task' %}" class="btn btn-primary" role="button" id="schedule_test_run_btn">保存运行</button>
-                <button data-href="{% url 'monitor:timing_task' %}" class="btn btn-danger" role="button" id="schedule_test_stop_btn">点击终止</button>
+                <button data-href="{% url 'monitor:task_run_test' %}" class="btn btn-primary" role="button" id="schedule_test_run_btn">保存运行</button>
+                <button data-href="{% url 'monitor:task_run_test' %}" class="btn btn-danger" role="button" id="schedule_test_stop_btn">点击终止</button>
                 <div class="input-group" id="schedule_warp" style="float: right;width: 50%;">
                   <span class="input-group-addon" id="basic-addon3">crontab: 0 */20 * * * * </span>
-                  <input type="text" class="form-control" id="schedule_cron" aria-describedby="basic-addon3">
+                  <input type="text" class="form-control" id="schedule_cron" aria-describedby="basic-addon3" value="{{ cron_str }}">
                 </div>
                 <div class="alert alert-success hide" style="margin-top: 10px;" role="alert" id="schedule_test_alert"></div>
             </div>
@@ -67,7 +68,7 @@
                 url:$(this).data('href'),
                 type:'get',
                 success:function(){
-                    $runTestAlert.html('<strong>Well done!</strong>测试执行完毕,请查看最新报告.');
+                    $runTestAlert.html('<strong>Well done!</strong>测试执行完毕,请查看最新巡检报告.');
                 },
                 error:function(){
                     $runTestAlert.html('<strong>Error!</strong>运行失败,请检查用例.').removeClass('alert-success').addClass('alert-danger');
@@ -77,9 +78,26 @@
 
         {# 更新Cookie的AJAX #}
         var $refreshCookieWarp=$('#refresh_cookie_warp');
+        var $refreshCookieOnce=$('#refresh_cookie_once');
         var $refreshCookieRunBtn=$('#refresh_cookie_run_btn');
         var $refreshCookieCron=$('#refresh_cookie_cron');
         var $refreshCookieAlert=$('#refresh_cookie_alert');
+        {# Ajax发送GET请求 #}
+        $refreshCookieOnce.on('click',function(){
+            $refreshCookieAlert.removeClass('hide').html('立即更新Cookie...').removeClass('alert-danger').addClass('alert-success');
+            $.ajax({
+                url:$(this).data('href'),
+                type:'get',
+                success:function(){
+                    $refreshCookieAlert.html('<strong>Well done!</strong>&nbsp;Cookie更新完毕.');
+                },
+                error:function(){
+                    $refreshCookieAlert.html('<strong>Error!</strong>&nbsp;Cookie更新失败.').removeClass('alert-success').addClass('alert-danger');
+                }
+            });
+        });
+
+        {# Ajax发送POST请求 #}
         $refreshCookieRunBtn.on('click',function(){
             if(!$refreshCookieCron.val()){
                 $refreshCookieWarp.addClass('has-error');

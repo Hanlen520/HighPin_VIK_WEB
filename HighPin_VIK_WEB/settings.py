@@ -28,7 +28,16 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
+    '192.168.66.143',
+    '192.168.66.201',
 ]
+
+# ALLOWED_HOSTS = [
+#     'localhost',
+#     '127.0.0.1',
+#     '172.19.2.223',
+#     'monitor.highpin.cn'
+# ]
 
 
 # Application definition
@@ -89,7 +98,7 @@ WSGI_APPLICATION = 'HighPin_VIK_WEB.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'VIK_DataBase',
+        'NAME': 'VIK_Test_DataBase',
         'USER': 'root',
         'PASSWORD': '123456',
         'HOST': '127.0.0.1',
@@ -129,14 +138,17 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+# 如果要在DateTimeField保存当前时间,需要设置成False(保证时区正确)
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = '/web_report_static/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'monitor/static')
 
 STATICFILES_DIRS = (
-    'monitor/static/report',
+    'monitor/static/report/',
 )

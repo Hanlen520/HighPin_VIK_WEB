@@ -41,7 +41,7 @@
                     <tr>
                         <th>用例名称</th>
                         <th>创建时间</th>
-                        <th>操作</th>
+                        <th>用例操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,6 +50,12 @@
                             <td>{{ case.case_name }}</td>
                             <td>{{ case.case_time|date:"Y年m月d日 H:i:s" }}</td>
                             <td>
+                                <a class="btn btn-info btn-sm"
+                                   href="../case_view/?case_id={{ case.id }}&page_no={{ page_no }}&num_pages={{ num_pages }}&case_name={{ case_name }}"
+                                   role="button"
+                                   id="view_case">
+                                    &nbsp;&nbsp;查看&nbsp;&nbsp;
+                                </a>
                                 <button class="btn btn-danger btn-sm del_btn" data-toggle="modal" data-target="#del_case_modal" data-case-id="{{ case.id }}">
                                     &nbsp;&nbsp;删除&nbsp;&nbsp;
                                 </button>

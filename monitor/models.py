@@ -3,18 +3,41 @@ from django.db import models
 # Create your models here.
 
 
+class Aggregate(models.Model):
+    batch_run_time = models.DateTimeField('运行时间')
+    create_date = models.DateField('生成日期')
+    is_error = models.BooleanField('是否有错', default=False)
+    pass_total_num = models.IntegerField('成功总数', default=0)
+    error_total_num = models.IntegerField('错误总量', default=0)
+    failure_total_num = models.IntegerField('失败总量', default=0)
+
+    def __str__(self):
+        return self.batch_run_time
+
+    class Meta:
+        ordering = ['-batch_run_time']
+
+
 class Report(models.Model):
+    aggregate = models.ForeignKey(Aggregate, on_delete=models.CASCADE)
     report_name = models.CharField('报告名称', max_length=200)
+    report_path = models.CharField('报告路径', max_length=400)
+    report_comp = models.CharField('报告应用', max_length=50)
     create_date = models.DateField('生成日期')
     create_time = models.TimeField('生成时间')
+    host_ip = models.CharField('IP地址', max_length=16)
     is_error = models.BooleanField('是否有错', default=False)
+    pass_num = models.IntegerField('成功数量', default=0)
+    error_num = models.IntegerField('错误数量', default=0)
+    failure_num = models.IntegerField('失败数量', default=0)
+    batch_run_time = models.DateTimeField('运行时间')
 
     def __str__(self):
         return self.report_name
 
     class Meta:
-        # 表示按照时间逆序倒排
-        ordering = ['-create_date', '-create_time']
+        # 表示按照运行时间逆序倒排
+        ordering = ['-aggregate']
 
 
 class Item(models.Model):
@@ -45,6 +68,7 @@ class Item_Error(models.Model):
 
 
 class Case(models.Model):
+    case_folder_path = models.CharField('用例路径', max_length=300)
     case_name = models.CharField('用例名称', max_length=300)
     case_time = models.DateTimeField('上传时间')
 

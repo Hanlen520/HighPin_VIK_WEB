@@ -1,16 +1,13 @@
 import json
 import os
-import time
+from datetime import datetime, timedelta, time
 
-from datetime import datetime, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, redirect
-from apscheduler.schedulers.background import BackgroundScheduler
-
-from monitor.models import Report, Item, Item_Error, Case
-from monitor.HighPin_VIK import VIKRunner
 from monitor.HighPin_VIK.GetNewCookie import GetUserCookie
-from monitor.HighPin_VIK.WriteReportToDB import handle_model
+from monitor.HighPin_VIK.VIKRunModule.RunTestControl import run_multiple_test
+from monitor.models import Aggregate, Report, Item, Item_Error, Case
 
 # 任务计划对象-全局变量(真不想定义这个全局变量)
 test_run_schedule = None
@@ -18,42 +15,143 @@ refresh_cookie_run_schedule = None
 
 
 def index(request):
+    aggregate_id = request.GET.get('aggregate_id')
+
+    status_c_list = list()
+    status_b_list = list()
+    status_h_list = list()
+    status_j_list = list()
+    status_w_list = list()
+    status_m_list = list()
+
+    get_last_item_sql = '''
+                            SELECT *
+                            FROM monitor_report
+                            WHERE aggregate_id = (
+                                SELECT id 
+                                FROM monitor_aggregate
+                                ORDER BY id DESC LIMIT 1
+                            )
+                        '''
+    if aggregate_id is not None:
+        get_last_item_sql = 'SELECT * FROM monitor_report WHERE aggregate_id = {0}'.format(aggregate_id)
+    report_collect = Report.objects.raw(get_last_item_sql)
+    if report_collect is None:
+        return render(request, template_name='index.html')
+    else:
+        for report in report_collect:
+            if report.report_comp == 'C端':
+                status_c_list.append({
+                    'report_name': report.report_name,
+                    'host_ip': report.host_ip,
+                    'error_num': report.error_num,
+                    'failure_num': report.failure_num,
+                    'pass_num': report.pass_num,
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                })
+            if report.report_comp == 'B端':
+                status_b_list.append({
+                    'report_name': report.report_name,
+                    'host_ip': report.host_ip,
+                    'error_num': report.error_num,
+                    'failure_num': report.failure_num,
+                    'pass_num': report.pass_num,
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                })
+            if report.report_comp == 'H端':
+                status_h_list.append({
+                    'report_name': report.report_name,
+                    'host_ip': report.host_ip,
+                    'error_num': report.error_num,
+                    'failure_num': report.failure_num,
+                    'pass_num': report.pass_num,
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                })
+            if report.report_comp == 'J端':
+                status_j_list.append({
+                    'report_name': report.report_name,
+                    'host_ip': report.host_ip,
+                    'error_num': report.error_num,
+                    'failure_num': report.failure_num,
+                    'pass_num': report.pass_num,
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                })
+            if report.report_comp == 'W端':
+                status_w_list.append({
+                    'report_name': report.report_name,
+                    'host_ip': report.host_ip,
+                    'error_num': report.error_num,
+                    'failure_num': report.failure_num,
+                    'pass_num': report.pass_num,
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                })
+            if report.report_comp == 'M端':
+                status_m_list.append({
+                    'report_name': report.report_name,
+                    'host_ip': report.host_ip,
+                    'error_num': report.error_num,
+                    'failure_num': report.failure_num,
+                    'pass_num': report.pass_num,
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                })
+    return render(request, template_name='index.html', context={
+        'status_c_list': status_c_list,
+        'status_b_list': status_b_list,
+        'status_h_list': status_h_list,
+        'status_j_list': status_j_list,
+        'status_w_list': status_w_list,
+        'status_m_list': status_m_list
+    })
+
+
+def detail_report(request):
     report_name = request.GET.get('report_name')
-    if report_name is None:
-        # 获取表中存放的报告路径
-        report_name = Report.objects.first()
-        if report_name is None:
-            return render(request, template_name='index.html')
-    return render(request, template_name='index.html', context={'report_name': report_name})
+    # 通过报告名称在库中查找报告路径
+    report_query = Report.objects.filter(report_name=report_name)
+    report_path = None
+    report_host_ip = None
+    for report in report_query:
+        # 查找路径
+        report_path = report.report_path
+        report_host_ip = report.host_ip
+    if report_path is not None:
+        report_path = report_path.split(os.sep)[-1]
+    else:
+        # 如果路径为空
+        return render(request, template_name='detail_report.html')
+    return render(request, template_name='detail_report.html', context={
+        'report_host_ip': report_host_ip,
+        'report_full_name': report_path + os.sep + report_name
+    })
 
 
-def report_filter(report_from_db, report_id, create_date, is_error):
+def aggregate_filter(aggregate_from_db, aggregate_id, create_date, is_error):
     if is_error == '':
         # 如果'是否出错'字段为空则只是用前面两个条件进行搜索
-        if report_id is '' and create_date is '':
-            report_from_db = Report.objects.filter()
-        elif report_id is not '' and create_date is '':
-            report_from_db = Report.objects.filter(id=report_id)
-        elif report_id is '' and create_date is not '':
-            report_from_db = Report.objects.filter(create_date=create_date)
-        elif report_id is not '' and create_date is not '':
-            report_from_db = Report.objects.filter(id=report_id, create_date=create_date)
+        if aggregate_id is '' and create_date is '':
+            aggregate_from_db = Aggregate.objects.filter()
+        elif aggregate_id is not '' and create_date is '':
+            aggregate_from_db = Aggregate.objects.filter(id=aggregate_id)
+        elif aggregate_id is '' and create_date is not '':
+            aggregate_from_db = Aggregate.objects.filter(create_date=create_date)
+        elif aggregate_id is not '' and create_date is not '':
+            aggregate_from_db = Aggregate.objects.filter(id=aggregate_id, create_date=create_date)
     else:
         # 如果'是否出错'字段不为空,则使用全部条件进行搜索
-        if report_id is '' and create_date is '':
-            report_from_db = Report.objects.filter(is_error=is_error)
-        elif report_id is not '' and create_date is '':
-            report_from_db = Report.objects.filter(id=report_id, is_error=is_error)
-        elif report_id is '' and create_date is not '':
-            report_from_db = Report.objects.filter(create_date=create_date, is_error=is_error)
-        elif report_id is not '' and create_date is not '':
-            report_from_db = Report.objects.filter(id=report_id, create_date=create_date, is_error=is_error)
-    return report_from_db
+        if aggregate_id is '' and create_date is '':
+            aggregate_from_db = Aggregate.objects.filter(is_error=is_error)
+        elif aggregate_id is not '' and create_date is '':
+            aggregate_from_db = Aggregate.objects.filter(id=aggregate_id, is_error=is_error)
+        elif aggregate_id is '' and create_date is not '':
+            aggregate_from_db = Aggregate.objects.filter(create_date=create_date, is_error=is_error)
+        elif aggregate_id is not '' and create_date is not '':
+            aggregate_from_db = Aggregate.objects.filter(id=aggregate_id, create_date=create_date, is_error=is_error)
+    return aggregate_from_db
 
 
-def reports_list(request):
+def aggregate_list(request):
     page_no = request.GET.get('page_no')
-    report_id = request.POST.get('report_id')
+    aggregate_id = request.POST.get('aggregate_id')
     create_date = request.POST.get('create_date')
     is_error = request.POST.get('is_error')
 
@@ -61,11 +159,11 @@ def reports_list(request):
     if page_no is None:
         page_no = 1
     # 如果得到None字符串,需要检查get方式下是否能获取参数
-    if report_id is None:
-        report_id = request.GET.get('report_id')
+    if aggregate_id is None:
+        aggregate_id = request.GET.get('report_id')
         # 如果get方式下获取的是None,用空字符串代替
-        if report_id is None:
-            report_id = ''
+        if aggregate_id is None:
+            aggregate_id = ''
     if create_date is None:
         create_date = request.GET.get('create_date')
         if create_date is None:
@@ -75,171 +173,211 @@ def reports_list(request):
         if is_error is None:
             is_error = ''
 
-    report_from_db = None
+    aggregate_from_db = None
     # 根据'是否出错'分成三种情况调用方法
     if is_error == 'true':
-        report_from_db = report_filter(report_from_db, report_id, create_date, True)
+        aggregate_from_db = aggregate_filter(aggregate_from_db, aggregate_id, create_date, True)
     elif is_error == 'false':
-        report_from_db = report_filter(report_from_db, report_id, create_date, False)
+        aggregate_from_db = aggregate_filter(aggregate_from_db, aggregate_id, create_date, False)
     elif is_error == '' or is_error is None:
-        report_from_db = report_filter(report_from_db, report_id, create_date, '')
+        aggregate_from_db = aggregate_filter(aggregate_from_db, aggregate_id, create_date, '')
 
     # 分页(每一页显示多少报告)
-    paginator = Paginator(report_from_db, 15)
+    paginator = Paginator(aggregate_from_db, 15)
     # 获取总共多少页
     num_pages = paginator.num_pages
 
     try:
-        report_list = paginator.page(page_no)
+        aggregates_list = paginator.page(page_no)
     except PageNotAnInteger:
         # 如果页码不是整型数字
-        report_list = paginator.page(1)
+        aggregates_list = paginator.page(1)
     except EmptyPage:
         # 如果页码超出了记录范围,则返回最后一页
-        report_list = paginator.page(paginator.num_pages)
+        aggregates_list = paginator.page(paginator.num_pages)
 
     return render(request, template_name='reports_list.html', context={
-        'report_list': report_list,
+        'aggregates_list': aggregates_list,
         'page_no': page_no,
         'num_pages': num_pages,
         # 搜索条件
-        'report_id': report_id,
+        'aggregate_id': aggregate_id,
         'create_date': create_date,
         'is_error': is_error
     })
 
 
-def get_new_report_items(request):
-    new_report = Report.objects.first()
-    new_report_date = None
-    new_report_items = None
-    if new_report is not None:
-        new_report_date = new_report.create_date
-        # 按照最新的一天的报告查询(使用extra方法按照model_name排序)
-        new_report_items = Item.objects.filter(report_id=new_report.id).extra(order_by=['model_name'])
-        # 打印SQL语句用于调试
-        # print(new_report_items.query)
+def agency_date_fetch(agency_type, end_date_str, begin_date_str):
+    if end_date_str is '' or begin_date_str is '':
+        # 字符串转日期
+        end_date = datetime.today()
+        # 日期减法,获取7天前日期
+        begin_date = end_date - timedelta(days=6)
+        # 日期转字符串
+        begin_date_str = begin_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
 
-    return render(request, template_name='items_list.html', context={
-        'new_report_items': new_report_items,
-        'new_report_date': new_report_date,
+    query_sql = '''
+        SELECT id, create_date, SUM(pass_num) pass_num, SUM(error_num) error_num, SUM(failure_num) failure_num
+        FROM monitor_report
+        WHERE create_date BETWEEN {0} AND {1}
+        AND report_comp = {2} 
+        GROUP BY create_date;
+    '''.format("'" + begin_date_str + "'", "'" + end_date_str + "'", "'" + agency_type + "'")
+
+    return query_sql, begin_date_str, end_date_str
+
+
+def agency_aggregate_num(request):
+    agency_type = request.POST.get('agency_type')
+    end_date_str = request.POST.get('end_date_str')
+    begin_date_str = request.POST.get('begin_date_str')
+
+    if agency_type is None:
+        agency_type = 'B端'
+    if end_date_str is None:
+        end_date_str = ''
+    if begin_date_str is None:
+        begin_date_str = ''
+    # 对每个端以天为单位做通过/错误/失败的汇总
+    query_sql, begin_date_str, end_date_str = agency_date_fetch(agency_type, end_date_str, begin_date_str)
+
+    create_date_list = list()
+    sum_pass_list = list()
+    sum_error_list = list()
+    sum_failure_list = list()
+
+    for collection in Report.objects.raw(query_sql):
+        create_date_list.append(datetime.strftime(collection.create_date, '%Y-%m-%d'))
+        sum_pass_list.append(int(collection.pass_num))
+        sum_error_list.append(int(collection.error_num))
+        sum_failure_list.append(int(collection.failure_num))
+
+    return render(request, template_name='agency_aggregate_chart.html', context={
+        'create_date_list': json.dumps(create_date_list),
+        'sum_pass_list': json.dumps(sum_pass_list),
+        'sum_error_list': json.dumps(sum_error_list),
+        'sum_failure_list': json.dumps(sum_failure_list),
+        # 搜索条件
+        'agency_type': agency_type,
+        'end_date_str': end_date_str,
+        'begin_date_str': begin_date_str
     })
 
 
-def display_chart(request):
-    model_name = request.GET.get('model_name')
-    end_record_date = request.GET.get('record_date')
-    # 字符串转日期
-    end_date = datetime.strptime(end_record_date, '%Y-%m-%d').date()
-    # 日期减法,获取7天前日期
-    begin_date = end_date - timedelta(days=6)
-    # 根据起止时间和业务流程名称获取数据(范围查询:xxxx_range=[x,x])
-    filter_items = Item.objects.filter(record_date__range=[begin_date, end_date]).filter(model_name=model_name)
-    # 打印SQL语句用于调试
-    print(filter_items.query)
+def agency_error_type(request):
+    end_date_str = request.POST.get('end_date_str')
+    begin_date_str = request.POST.get('begin_date_str')
 
-    day_list = list()
-    day_str_list = list()
-    for day in range((end_date - begin_date).days + 1):
-        day = begin_date + timedelta(days=day)
-        day_list.append(day)
-        day_str_list.append(day.strftime('%Y-%m-%d'))  # 需要将日期类型转成字符串
+    if end_date_str is None:
+        end_date_str = ''
+    if begin_date_str is None:
+        begin_date_str = ''
 
-    pass_num = 0
-    error_num = 0
-    fail_num = 0
+    if end_date_str is '' or begin_date_str is '':
+        # 字符串转日期
+        end_date = datetime.today()
+        # 日期减法,获取7天前日期
+        begin_date = end_date - timedelta(days=6)
+        # 日期转字符串
+        begin_date_str = begin_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+    # 统计每一端的错误数量
+    query_sql = '''
+        SELECT 
+          item_error.id, 
+          report.report_comp, 
+          item_error.error_type_flag, 
+          COUNT(item_error.error_type_flag) error_type_flag_value
+        FROM monitor_item_error item_error
+        LEFT JOIN monitor_item item ON item.id = item_error.item_id
+        LEFT JOIN monitor_report report ON report.id = item.report_id
+        WHERE item_error.record_date BETWEEN {0} AND {1}
+        GROUP BY report.report_comp, item_error.error_type_flag;
+    '''.format("'" + begin_date_str + "'", "'" + end_date_str + "'")
 
-    pass_list = list()
-    error_list = list()
-    fail_list = list()
+    agency_list = ['B端', 'C端', 'H端', 'J端', 'W端', 'M端']
+    list_502 = [0] * 6
+    list_404 = [0] * 6
+    list_timeout = [0] * 6
+    unknown_error_list = [0] * 6
 
-    # 根据一周7天生成对应状态的列表
-    for day in day_list:
-        for q in filter_items:
-            if day == q.record_date:
-                if q.error_flag == 0:
-                    pass_num += 1
-                if q.error_flag == 1:
-                    error_num += 1
-                if q.error_flag == 2:
-                    fail_num += 1
-        pass_list.append(pass_num)
-        error_list.append(error_num)
-        fail_list.append(fail_num)
+    for agency_index in range(len(agency_list)):
+        for error_item in Item_Error.objects.raw(query_sql):
+            if agency_list[agency_index] == error_item.report_comp:
+                if error_item.error_type_flag == 1:
+                    list_502[agency_index] = error_item.error_type_flag_value
+                if error_item.error_type_flag == 2:
+                    list_404[agency_index] = error_item.error_type_flag_value
+                if error_item.error_type_flag == 3:
+                    list_timeout[agency_index] = error_item.error_type_flag_value
+                if error_item.error_type_flag == 4:
+                    unknown_error_list[agency_index] = error_item.error_type_flag_value
 
-        pass_num = 0
-        error_num = 0
-        fail_num = 0
-
-    # print(pass_list)
-    # print(error_list)
-    # print(fail_list)
-
-    return render(request, template_name='tendency_chart.html', context={
-        'model_name': model_name,
-        'day_str_list': day_str_list,
-        'pass_list': pass_list,
-        'error_list': error_list,
-        'fail_list': fail_list
-    })
-
-
-def display_error_column(request):
-    model_list = list()
-    error_detail_list = list()
-
-    # 字符串转日期
-    end_date = datetime.today()
-    # 日期减法,获取7天前日期
-    begin_date = end_date - timedelta(days=6)
-
-    begin_date_str = begin_date.strftime('%Y-%m-%d')
-    end_date_str = end_date.strftime('%Y-%m-%d')
-
-    # 日期查询的时候必须用单引号~
-    query_sql = ''' 
-                    SELECT id, model_name, item_name, error_type_flag, COUNT(error_type_flag) error_flag_num
-                    FROM monitor_item_error
-                    WHERE record_date BETWEEN {0} AND {1}
-                    GROUP BY model_name, error_type_flag
-                    ORDER BY COUNT(model_name) DESC
-                '''.format("'" + begin_date_str + "'", "'" + end_date_str + "'")
-
-    for error_item in Item_Error.objects.raw(query_sql):
-        model_list.append(error_item.model_name)
-
-        error_detail_list.append({
-            'model_name': error_item.model_name,
-            'item_name': error_item.item_name,
-            'error_type_flag': error_item.error_type_flag,
-            'error_flag_num': error_item.error_flag_num
-        })
-
-    # 对列表中的模块名称进行去重,保留原来的排列顺序,并只取错误最多的前5个模块
-    model_list = sorted(set(model_list), key=model_list.index)[0:5]
-
-    print(model_list)
-
-    # 初始化异常统计列表长度
-    list_502 = [0] * 5
-    list_404 = [0] * 5
-    list_timeout = [0] * 5
-    list_unknown = [0] * 5
-
-    for model_index in range(len(model_list)):
-        for error_detail in error_detail_list:
-            if model_list[model_index] == error_detail['model_name']:
-                if error_detail['error_type_flag'] == 1: list_502[model_index] = error_detail['error_flag_num']
-                if error_detail['error_type_flag'] == 2: list_404[model_index] = error_detail['error_flag_num']
-                if error_detail['error_type_flag'] == 3: list_timeout[model_index] = error_detail['error_flag_num']
-                if error_detail['error_type_flag'] == 4: list_unknown[model_index] = error_detail['error_flag_num']
-
-    return render(request, template_name='error_type_chart.html', context={
-        'model_list': json.dumps(model_list),
+    return render(request, template_name='agency_error_type_chart.html', context={
+        'agency_list': json.dumps(agency_list),
         'list_502': json.dumps(list_502),
         'list_404': json.dumps(list_404),
         'list_timeout': json.dumps(list_timeout),
-        'list_unknown': json.dumps(list_unknown)
+        'unknown_error_list': json.dumps(unknown_error_list),
+        # 搜索条件
+        'end_date_str': end_date_str,
+        'begin_date_str': begin_date_str
+    })
+
+
+def agency_machine_statistic(request):
+    agency_type = request.POST.get('agency_type')
+    end_date_str = request.POST.get('end_date_str')
+    begin_date_str = request.POST.get('begin_date_str')
+
+    if agency_type is None:
+        agency_type = 'B端'
+    if end_date_str is None:
+        end_date_str = ''
+    if begin_date_str is None:
+        begin_date_str = ''
+
+    if end_date_str is '' or begin_date_str is '':
+        # 字符串转日期
+        end_date = datetime.today()
+        # 日期减法,获取7天前日期
+        begin_date = end_date - timedelta(days=6)
+        # 日期转字符串
+        begin_date_str = begin_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+
+    query_sql = '''
+        SELECT 
+            id, host_ip, 
+            SUM(pass_num) pass_total_num, 
+            SUM(error_num) error_total_num, 
+            SUM(failure_num) failure_num
+        FROM monitor_report
+        WHERE create_date BETWEEN {0} AND {1}
+        AND report_comp = {2}
+        GROUP BY host_ip 
+    '''.format("'" + begin_date_str + "'", "'" + end_date_str + "'", "'" + agency_type + "'")
+
+    machine_ip_list = list()
+    machine_pass_list = list()
+    machine_error_list = list()
+    machine_failure_list = list()
+    for machine in Report.objects.raw(query_sql):
+        machine_ip_list.append(machine.host_ip)
+        machine_pass_list.append(int(machine.pass_total_num))
+        machine_error_list.append(int(machine.error_total_num))
+        machine_failure_list.append(int(machine.failure_num))
+
+    return render(request, template_name='agency_machine_statistics.html', context={
+        'machine_ip_list': json.dumps(machine_ip_list),
+        'machine_pass_list': json.dumps(machine_pass_list),
+        'machine_error_list': json.dumps(machine_error_list),
+        'machine_failure_list': json.dumps(machine_failure_list),
+        # 搜索条件
+        'agency_type': agency_type,
+        'begin_date_str': begin_date_str,
+        'end_date_str': end_date_str
     })
 
 
@@ -286,18 +424,43 @@ def cases_list(request):
     })
 
 
+def case_view(request):
+    case_id = request.GET.get("case_id")
+    page_no = request.GET.get("page_no")
+    case_name = request.GET.get('case_name')
+
+    view_case = Case.objects.filter(id=case_id)
+    case_full_path = ''
+    for case_info in view_case:
+        path = case_info.case_folder_path
+        name = case_info.case_name
+        case_full_path = path + os.sep + name
+    with open(case_full_path, 'r', encoding='UTF-8') as f:
+        case_lines_content = f.readlines()
+    case_content = ''
+    for case_line in case_lines_content:
+        case_content = case_content + case_line
+
+    return render(request, template_name='view_case.html', context={
+        'case_content': case_content,
+        'page_no': page_no,
+        'case_name': case_name  # 搜索条件
+    })
+
+
 def upload_case(request):
     upload_case_file = request.FILES.get('upload_case')
-
+    # 用例上传路径
+    case_folder_path = os.path.dirname(__file__) + '/static/testcase'
     # 利用绝对路径确定保存位置
-    with open(os.path.dirname(__file__) + '/static/testcase/' + upload_case_file.name, 'wb+') as destination:
+    with open(case_folder_path + os.sep + upload_case_file.name, 'wb+') as destination:
         for chunk in upload_case_file.chunks():
             destination.write(chunk)
     # 获取上传时间
     # case_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
     case_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    case_record = {'case_name': upload_case_file.name, 'case_time': case_time}
+    case_record = {'case_folder_path': case_folder_path, 'case_name': upload_case_file.name, 'case_time': case_time}
     # 将报告写入到数据库
     case = Case.objects.create(**case_record)
     case.save()
@@ -334,8 +497,7 @@ def test_operate(request):
 
 
 def run_test(request):
-    VIKRunner.run_test()  # 运行测试
-    handle_model.save_report_title()  # 将测试报告的内容保存到DB
+    run_multiple_test()     # 运行测试(按Host运行)
     return render(request, template_name='test_operate.html', context={})
 
 
@@ -364,7 +526,7 @@ class RefreshCookieScheduleTask:
 refresh_cookie_scheduler_obj = SingletonDecorator(RefreshCookieScheduleTask)
 
 
-def refresh_cookie(request):
+def task_refresh_cookie(request):
     """
     更新Cookie的计划任务
     :param request:
@@ -383,7 +545,7 @@ def refresh_cookie(request):
         if task_flag['run_flag'] == 'start_run':
             refresh_cookie_run_schedule = refresh_cookie_scheduler_obj().refresh_cookie_schedule
             refresh_cookie_run_schedule.add_job(
-                task_run_refresh_cookie,  # 任务方法
+                refresh_cookie,  # 任务方法
                 trigger='cron',
                 second=cron_list[0],
                 minute=cron_list[1],
@@ -416,6 +578,26 @@ def refresh_cookie(request):
     return render(request, template_name='test_operate.html', context={})
 
 
+def once_refresh_cookie(request):
+    '''
+    :description: 立即更新cookie
+    :param request: 
+    :return: 
+    '''
+    refresh_cookie()
+    return render(request, template_name='test_operate.html', context={})
+
+
+def refresh_cookie():
+    """
+    调用更新Cookie方法
+    :return:
+    """
+    print('Refresh_Cookie ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    print(os.path.join(os.path.dirname(__file__), 'static', 'testcase'))
+    GetUserCookie.search_cookie(os.path.join(os.path.dirname(__file__), 'static', 'testcase'))
+
+
 class TestScheduleTask:
     """
     声明测试运行的任务计划类
@@ -426,7 +608,7 @@ class TestScheduleTask:
 test_scheduler_obj = SingletonDecorator(TestScheduleTask)
 
 
-def timing_task(request):
+def task_run_test(request):
     """
     执行测试的计划任务
     :param request:
@@ -448,7 +630,7 @@ def timing_task(request):
         if task_flag['run_flag'] == 'start_run':
             test_run_schedule = test_scheduler_obj().test_schedule
             test_run_schedule.add_job(
-                task_run_test,  # 任务方法
+                start_test,  # 任务方法
                 trigger='cron',
                 second=cron_list[0],
                 minute=cron_list[1],
@@ -481,23 +663,10 @@ def timing_task(request):
     return render(request, template_name='test_operate.html', context={})
 
 
-def task_run_test():
+def start_test():
     """
     调用测试方法
     :return:
     """
     print('定时操作_Task_Test ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    # 运行测试
-    VIKRunner.run_test()
-    # 将测试报告的内容保存到DB
-    handle_model.save_report_title()
-
-
-def task_run_refresh_cookie():
-    """
-    调用更新Cookie方法
-    :return:
-    """
-    print('定时操作_Task_Refresh_Cookie ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    print(os.path.join(os.path.dirname(__file__), 'static', 'testcase'))
-    GetUserCookie.search_cookie(os.path.join(os.path.dirname(__file__), 'static', 'testcase'))
+    run_multiple_test()  # 运行测试(按Host运行)

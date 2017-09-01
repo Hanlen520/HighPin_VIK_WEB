@@ -2,6 +2,7 @@
 __author__ = 'Peng.Zhao'
 
 import re
+from monitor.HighPin_VIK.LogModule import LogConfigure
 
 
 def corr_match(self, resp_cont):
