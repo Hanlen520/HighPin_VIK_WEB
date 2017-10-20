@@ -2,7 +2,7 @@
 {% block content %}
     <div id="container" class="clearfix">
         <div style="margin:45px 0 20px 20.5%;" class="col-md-9 ta_r">
-            <form class="form-inline" action="{% url 'monitor:agency_aggregate_num' %}" method="post">
+            <form class="form-inline" action="{% url 'monitor:agency_machine_statistic' %}" method="post">
                 {# 提交表单需要使用csrf_token #}
                 {% csrf_token %}
                 <div class="form-group">

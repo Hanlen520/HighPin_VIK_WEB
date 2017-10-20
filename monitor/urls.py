@@ -4,6 +4,8 @@ from monitor import views
 urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(r'^detail_report/', views.detail_report, name='detail_report'),
+    url(r'^response_report/', views.response_report, name='response_report'),
+    url(r'^response_content/', views.response_content, name='response_content'),
     url(r'^aggregate_list/', views.aggregate_list, name='aggregate_list'),
     url(r'^agency_aggregate_num/', views.agency_aggregate_num, name='agency_aggregate_num'),
     url(r'^agency_error_type/', views.agency_error_type, name='agency_error_type'),

@@ -69,16 +69,17 @@ def switch_host_for_linux(host_file_content):
     subprocess.call(['/etc/init.d/network', 'restart'])
 
 
-def run_test_control(host_dict):
-    # 获取当前时区的当前时间
-    batch_run_time = datetime.datetime.now()
+def create_report_folder(batch_run_time):
     # 获取当前时间当做报告保存目录
     now_time_folder = batch_run_time.strftime('%Y-%m-%d_%H-%M-%S')
-    # 测试使用
-    # save_report_path = os.path.abspath('../../static/report/' + now_time)
     # 建立存放报告目录
     save_report_path = os.path.join(os.path.abspath('.'), 'monitor', 'static', 'report', now_time_folder)
     os.mkdir(save_report_path)
+
+    return save_report_path
+
+
+def compose_test_case():
     # 载入测试用例
     total_test_list = LoadTestCase.load_test_case_for_xml()
     # 定义各端的测试用例列表
@@ -111,11 +112,40 @@ def run_test_control(host_dict):
     total_test_case_dict['J_Client'] = j_list
     total_test_case_dict['W_Client'] = w_list
     total_test_case_dict['M_Client'] = m_list
+
+    return total_test_case_dict
+
+
+def judge_time_out(host_check_dict):
+    # 当前机器的超时数量
+    total_timeout_num = 0
+    # 设置每个请求是否超时,并把每个请求的响应状态放到列表中
+    class_resp_status_list = list()
+    for resp_status_list in host_check_dict['class_resp_status_list']:
+        for resp_status in resp_status_list:
+            # 设定超时阀值5000
+            if resp_status['resp_duration'] > 3000:
+                resp_status['is_timeout'] = 1  # 已超时
+                total_timeout_num += 1  # 如果超时,数量+1
+            else:
+                resp_status['is_timeout'] = 0  # 未超时
+            class_resp_status_list.append(resp_status)
+    return total_timeout_num, class_resp_status_list
+
+
+def run_test_control(host_dict):
+    # 获取当前时区的当前时间
+    batch_run_time = datetime.datetime.now()
+    # 创建存放报告文件夹,并获取文件夹的路径
+    save_report_path = create_report_folder(batch_run_time)
+
+    # 将测试用例按照各端进行归类
+    total_test_case_dict = compose_test_case()
     # 定义保存每个HOST检查结果的列表,用于邮件发送
     host_check_status_dict = dict()
     # 定义保存至数据库的信息列表
     save_report_list = list()
-    # 修改当前系统的Host
+    # 修改当前系统的Host,并运行测试
     for host_key_client, host_value in host_dict.items():
         host_client_dict = host_dict[host_key_client]
         host_check_status_dict[host_key_client] = list()
@@ -124,35 +154,36 @@ def run_test_control(host_dict):
             if len(total_test_case_dict[host_key_client]) != 0:
                 LogConfigure.logging.info('切换Hosts: ' + host_key_ip)
                 # 切换Host-Linux
-                switch_host_for_linux(host_client_dict[host_key_ip])
+                # switch_host_for_linux(host_client_dict[host_key_ip])
                 # 切换Host-Windows
-                # switch_host_for_windows(host_client_dict[host_key_ip])
+                switch_host_for_windows(host_client_dict[host_key_ip])
                 # 运行测试
                 host_check_dict = run_test(total_test_case_dict[host_key_client], save_report_path, host_key_ip)
-                # 将报告保存到数据库当中
+                # 测试用例归类
                 host_client = None
-                if host_key_client == 'C_Client':
-                    host_client = 'C端'
-                if host_key_client == 'B_Client':
-                    host_client = 'B端'
-                if host_key_client == 'H_Client':
-                    host_client = 'H端'
-                if host_key_client == 'J_Client':
-                    host_client = 'J端'
-                if host_key_client == 'W_Client':
-                    host_client = 'W端'
-                if host_key_client == 'M_Client':
-                    host_client = 'M端'
-                # 将记录保存至数据库
+                if host_key_client == 'C_Client': host_client = 'C端'
+                if host_key_client == 'B_Client': host_client = 'B端'
+                if host_key_client == 'H_Client': host_client = 'H端'
+                if host_key_client == 'J_Client': host_client = 'J端'
+                if host_key_client == 'W_Client': host_client = 'W端'
+                if host_key_client == 'M_Client': host_client = 'M端'
+
+                total_timeout_num, class_resp_status_list = judge_time_out(host_check_dict)
+
+                # 将超时数量插入到邮件模板的数据结构当中
+                host_check_dict['status']['timeout'] = total_timeout_num
+                # 将运行结果加入到列表中,用于发送邮件
+                host_check_status_dict[host_key_client].append(host_check_dict)
+                # 建立保存至数据库的记录
                 save_report_list.append({
                     'save_report_path': save_report_path,
                     'save_report_full_name': host_check_dict['report_full_name'],
                     'host_client': host_client,
                     'host_key_ip': host_key_ip,
-                    'batch_run_time': batch_run_time
+                    'batch_run_time': batch_run_time,
+                    'class_resp_status_list': class_resp_status_list
                 })
-                # 将运行结果加入到列表中,用于发送邮件
-                host_check_status_dict[host_key_client].append(host_check_dict)
+
     # 将记录保存至数据库
     handle_model.save_report_batch_aggregate(save_report_list, batch_run_time)
     return host_check_status_dict

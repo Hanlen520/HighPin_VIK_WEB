@@ -7,8 +7,9 @@ class Aggregate(models.Model):
     batch_run_time = models.DateTimeField('运行时间')
     create_date = models.DateField('生成日期')
     is_error = models.BooleanField('是否有错', default=False)
-    pass_total_num = models.IntegerField('成功总数', default=0)
+    pass_total_num = models.IntegerField('成功总量', default=0)
     error_total_num = models.IntegerField('错误总量', default=0)
+    time_out_total_num = models.IntegerField('超时总量', default=0)
     failure_total_num = models.IntegerField('失败总量', default=0)
 
     def __str__(self):
@@ -29,6 +30,7 @@ class Report(models.Model):
     is_error = models.BooleanField('是否有错', default=False)
     pass_num = models.IntegerField('成功数量', default=0)
     error_num = models.IntegerField('错误数量', default=0)
+    time_out_num = models.IntegerField('超时数量', default=0)
     failure_num = models.IntegerField('失败数量', default=0)
     batch_run_time = models.DateTimeField('运行时间')
 
@@ -65,6 +67,25 @@ class Item_Error(models.Model):
 
     class Meta:
         ordering = ['-item']    # 按照外键倒排
+
+
+class Response_Status(models.Model):
+    report = models.ForeignKey(Report, on_delete=models.CASCADE)
+    ip = models.CharField('服务器IP', max_length=16)
+    model_name = models.CharField('模块名称', max_length=300)
+    item_name = models.CharField('条目名称', max_length=300)
+    url = models.CharField('请求URL', max_length=1024)
+    resp_content = models.TextField('请求返回内容')
+    resp_duration = models.CharField('响应时间', max_length=16)
+    req_time = models.DateTimeField('请求发起时间')
+    status_code = models.CharField('返回状态码', max_length=4)
+    is_timeout = models.BooleanField('是否超时', default=False)
+
+    def __str__(self):
+        return self.ip
+
+    class Meta:
+        ordering = ['-report']  # 按照外键倒排
 
 
 class Case(models.Model):

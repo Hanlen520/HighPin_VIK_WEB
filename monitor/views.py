@@ -7,7 +7,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, redirect
 from monitor.HighPin_VIK.GetNewCookie import GetUserCookie
 from monitor.HighPin_VIK.VIKRunModule.RunTestControl import run_multiple_test
-from monitor.models import Aggregate, Report, Item, Item_Error, Case
+from monitor.models import Aggregate, Report, Item, Item_Error, Case, Response_Status
 
 # 任务计划对象-全局变量(真不想定义这个全局变量)
 test_run_schedule = None
@@ -40,61 +40,81 @@ def index(request):
         return render(request, template_name='index.html')
     else:
         for report in report_collect:
+            aggregate_id = report.aggregate_id      # 获取汇总报告id
             if report.report_comp == 'C端':
                 status_c_list.append({
+                    'report_id': report.id,
                     'report_name': report.report_name,
                     'host_ip': report.host_ip,
                     'error_num': report.error_num,
+                    'time_out_num': report.time_out_num,
                     'failure_num': report.failure_num,
                     'pass_num': report.pass_num,
-                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
+                                                                                                    "%H:%M:%S")
                 })
             if report.report_comp == 'B端':
                 status_b_list.append({
+                    'report_id': report.id,
                     'report_name': report.report_name,
                     'host_ip': report.host_ip,
                     'error_num': report.error_num,
+                    'time_out_num': report.time_out_num,
                     'failure_num': report.failure_num,
                     'pass_num': report.pass_num,
-                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
+                                                                                                    "%H:%M:%S")
                 })
             if report.report_comp == 'H端':
                 status_h_list.append({
+                    'report_id': report.id,
                     'report_name': report.report_name,
                     'host_ip': report.host_ip,
                     'error_num': report.error_num,
+                    'time_out_num': report.time_out_num,
                     'failure_num': report.failure_num,
                     'pass_num': report.pass_num,
-                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
+                                                                                                    "%H:%M:%S")
                 })
             if report.report_comp == 'J端':
                 status_j_list.append({
+                    'report_id': report.id,
                     'report_name': report.report_name,
                     'host_ip': report.host_ip,
                     'error_num': report.error_num,
+                    'time_out_num': report.time_out_num,
                     'failure_num': report.failure_num,
                     'pass_num': report.pass_num,
-                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
+                                                                                                    "%H:%M:%S")
                 })
             if report.report_comp == 'W端':
                 status_w_list.append({
+                    'report_id': report.id,
                     'report_name': report.report_name,
                     'host_ip': report.host_ip,
                     'error_num': report.error_num,
+                    'time_out_num': report.time_out_num,
                     'failure_num': report.failure_num,
                     'pass_num': report.pass_num,
-                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
+                                                                                                    "%H-%M-%S")
                 })
             if report.report_comp == 'M端':
                 status_m_list.append({
+                    'report_id': report.id,
                     'report_name': report.report_name,
                     'host_ip': report.host_ip,
                     'error_num': report.error_num,
+                    'time_out_num': report.time_out_num,
                     'failure_num': report.failure_num,
                     'pass_num': report.pass_num,
-                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + '_' + time.strftime(report.create_time, "%H-%M-%S")
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
+                                                                                                    "%H:%M:%S")
                 })
     return render(request, template_name='index.html', context={
+        'aggregate_id': aggregate_id,
         'status_c_list': status_c_list,
         'status_b_list': status_b_list,
         'status_h_list': status_h_list,
@@ -105,23 +125,62 @@ def index(request):
 
 
 def detail_report(request):
+    aggregate_id = request.GET.get('aggregate_id')
+    report_id = request.GET.get('report_id')
     report_name = request.GET.get('report_name')
     # 通过报告名称在库中查找报告路径
     report_query = Report.objects.filter(report_name=report_name)
     report_path = None
-    report_host_ip = None
     for report in report_query:
         # 查找路径
         report_path = report.report_path
-        report_host_ip = report.host_ip
     if report_path is not None:
         report_path = report_path.split(os.sep)[-1]
     else:
         # 如果路径为空
         return render(request, template_name='detail_report.html')
     return render(request, template_name='detail_report.html', context={
-        'report_host_ip': report_host_ip,
+        'aggregate_id': aggregate_id,
+        'report_name': report_name,
+        'report_id': report_id,
         'report_full_name': report_path + os.sep + report_name
+    })
+
+
+def response_report(request):
+    aggregate_id = request.GET.get('aggregate_id')
+    report_id = request.GET.get('report_id')
+    report_name = request.GET.get('report_name')
+    # 从DB中查找当前报告的超时记录
+    response_query = Response_Status.objects.filter(report_id=report_id)
+    response_info_list = list()
+    for query_info in response_query:
+        query_item_dict = dict()
+        query_item_dict['id'] = query_info.id
+        query_item_dict['model_name'] = query_info.model_name
+        query_item_dict['item_name'] = query_info.item_name
+        query_item_dict['url'] = query_info.url
+        query_item_dict['resp_duration'] = query_info.resp_duration
+        query_item_dict['req_time'] = query_info.req_time.strftime("%Y-%m-%d %H:%M:%S")
+        query_item_dict['status_code'] = query_info.status_code
+        query_item_dict['is_timeout'] = '是' if query_info.is_timeout is True else '否'
+        response_info_list.append(query_item_dict)
+    return render(request, template_name='response_report.html', context={
+        'aggregate_id': aggregate_id,
+        'report_name': report_name,
+        'report_id': report_id,
+        'response_info_list': response_info_list
+    })
+
+
+def response_content(request):
+    aggregate_id = request.GET.get('aggregate_id')
+    resp_status_id = request.GET.get('resp_status_id')
+    resp_query = Response_Status.objects.get(id=resp_status_id)
+    resp_content = resp_query.resp_content
+    return render(request, template_name='response_content.html', context={
+        'aggregate_id': aggregate_id,
+        'resp_content': resp_content
     })
 
 
@@ -497,7 +556,7 @@ def test_operate(request):
 
 
 def run_test(request):
-    run_multiple_test()     # 运行测试(按Host运行)
+    run_multiple_test()  # 运行测试(按Host运行)
     return render(request, template_name='test_operate.html', context={})
 
 

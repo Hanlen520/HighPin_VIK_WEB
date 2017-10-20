@@ -36,5 +36,7 @@ def report_filter(report_path):
         f.write(content)
     return lite_report_path
 
+
 if __name__ == '__main__':
     report_compress('../../static/report/result_2017-04-14_10-55-00.html')
+

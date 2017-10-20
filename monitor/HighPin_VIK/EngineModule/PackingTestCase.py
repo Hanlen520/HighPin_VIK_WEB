@@ -5,7 +5,7 @@ __author__ = 'Peng.Zhao'
 def packing_test_case(test_case_list):
     """
     :description: 将测试用例的四个数据项分散到五个列表当中
-    :param test_list: 测试用例
+    :param test_case_list: 测试用例
     :return: 返回4个测试用例的item列表
     """
     title_list = []

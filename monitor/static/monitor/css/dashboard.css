@@ -177,3 +177,11 @@ ol,ul { list-style: none; }
     width: 200px;
 }
 .mt_20{margin-top: 20px;}
+
+
+.reportList .table tbody tr td.centerText{
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    vertical-align: middle;
+}

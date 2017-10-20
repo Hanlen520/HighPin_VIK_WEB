@@ -34,5 +34,6 @@ def load_test_case_for_xml():
     # print(json.dumps(total_test_list, ensure_ascii=False))
     return total_test_list
 
+
 if __name__ == '__main__':
     load_test_case_for_xml()

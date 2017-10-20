@@ -18,6 +18,8 @@ def run_test(test_list, save_report_path, host_ip):
     :param host_ip: 访问HOST的IP
     """
     # print(json.dumps(test_list, ensure_ascii=False))
+    # 定义所有测试类的列表
+    class_resp_status_list = list()
     # 定义所有文件的TestSuite
     test_suite_for_all_file = unittest.TestSuite()
     for test_file_dict in test_list:
@@ -29,6 +31,8 @@ def run_test(test_list, save_report_path, host_ip):
             test_suite_for_file = unittest.TestSuite()
             # 根据文件生成测试用例类
             test_file_class = CreateTestCaseModule.create_test_case_class_for_file((test_key, test_value), host_ip)
+            # 将测试类加入到列表当中
+            class_resp_status_list.append(test_file_class.resp_status_list)
             # 遍历每个类的测试步骤
             for test_file_case in test_value:
                 # 取步骤的title当做测试方法名,并将这个测试方法加入到Test_Suite当中
@@ -43,7 +47,7 @@ def run_test(test_list, save_report_path, host_ip):
     file_name = 'Result_' + host_ip + '_' + now_time + '.html'
     report_full_name = save_report_path + os.sep + file_name
     with open(report_full_name, 'wb') as file_open:
-        # runner = HTMLTestRunner.HTMLTestRunner(stream=file_open, title='测试结果')
+        # 定义报告内容输出
         runner = HTMLTestReportCN.HTMLTestRunner(stream=file_open, title='测试结果', tester=host_ip)
         # 运行测试
         result = runner.run(test_suite_for_all_file)
@@ -60,7 +64,8 @@ def run_test(test_list, save_report_path, host_ip):
             'time': now_time,
             'flag': True,
             'report_full_name': report_full_name,
-            'report_name': file_name
+            'report_name': file_name,
+            'class_resp_status_list': class_resp_status_list
         }
     else:
         return {'flag': False}

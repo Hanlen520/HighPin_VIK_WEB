@@ -7,36 +7,6 @@ from monitor.HighPin_VIK.EngineModule import PackingTestCase
 from monitor.HighPin_VIK.EngineModule import TestFunWrapper
 
 
-def create_test_case_class(test_module):
-    """
-    :description: 创建测试用例类
-    :param test_module: 测试用例的数据对象
-    :return: 单个测试类
-    """
-    # 载入参数,根据测试用例中的item,分别获取4个列表
-    title_list, req_data_list, corr_list, verify_list = PackingTestCase.packing_test_case(test_module.test_case_list)
-    # 创建方法字典
-    test_member_dict = dict()
-    test_member_dict['title_list'] = title_list
-    test_member_dict['req_data_list'] = req_data_list
-    test_member_dict['corr_list'] = corr_list
-    test_member_dict['verify_list'] = verify_list
-    # 定义测试类的静态变量,用于流程型用例数据的读取
-    test_member_dict['index'] = 0
-    # 加入测试方法
-    for test_case_title in title_list:
-        test_member_dict[test_case_title] = TestFunWrapper.test_wrapper_fun
-
-    # 获取类名
-    class_name = test_module.__name__
-    # 因为获取的类全名是用"."分割,所以只需要最后的名字即可--name_list[2]
-    name_list = class_name.split('.')
-
-    # 创建测试类
-    single_test_class = type(name_list[1], (unittest.TestCase,), test_member_dict)
-    return single_test_class
-
-
 def create_test_case_class_for_file(test_tuple, host_ip):
     """
     :description: 创建测试用例类(兼容XML/Excel)
@@ -48,12 +18,15 @@ def create_test_case_class_for_file(test_tuple, host_ip):
     # 创建方法字典
     test_member_dict = dict()
     # 这里必须使用深度复制,因为生成了多个类,而多个类会引用同一个属性,导致关联出现问题.
+    test_member_dict['resp_status_list'] = deepcopy(list())
+    test_member_dict['case_name'] = deepcopy(test_tuple[0])
     test_member_dict['title_list'] = deepcopy(title_list)
     test_member_dict['req_data_list'] = deepcopy(req_data_list)
     # 测试类的corr_list必须使用深度复制,否则会出现第一台机运行正常,后续机器运行出错.
     test_member_dict['corr_list'] = deepcopy(corr_list)
     test_member_dict['wait_seconds_list'] = deepcopy(wait_seconds_list)
     test_member_dict['verify_list'] = deepcopy(verify_list)
+    test_member_dict['server_ip'] = deepcopy(host_ip)
     # 定义测试类的静态变量,用于流程型用例数据的读取
     test_member_dict['index'] = 0
     # 加入测试方法
