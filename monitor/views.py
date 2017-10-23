@@ -99,7 +99,7 @@ def index(request):
                     'failure_num': report.failure_num,
                     'pass_num': report.pass_num,
                     'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
-                                                                                                    "%H-%M-%S")
+                                                                                                    "%H:%M:%S")
                 })
             if report.report_comp == 'M端':
                 status_m_list.append({

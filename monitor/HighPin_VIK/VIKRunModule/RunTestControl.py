@@ -123,7 +123,7 @@ def judge_time_out(host_check_dict):
     class_resp_status_list = list()
     for resp_status_list in host_check_dict['class_resp_status_list']:
         for resp_status in resp_status_list:
-            # 设定超时阀值5000
+            # 设定超时阀值3000
             if resp_status['resp_duration'] > 3000:
                 resp_status['is_timeout'] = 1  # 已超时
                 total_timeout_num += 1  # 如果超时,数量+1
