@@ -9,7 +9,8 @@ import configparser
 from email.header import Header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from monitor.HighPin_VIK.ReportHandler.ReportHandler import report_compress, report_filter
+from monitor.HighPin_VIK.LogModule import LogConfigure
+from monitor.HighPin_VIK.ReportHandler.ReportHandler import report_compress
 
 
 def read_config(conf_path):
@@ -87,12 +88,19 @@ def send_email_html_content(parse_info, host_check_status_dict):
     # 给多个人发送需要使用列表
     receiver_list = receiver.split(',')
 
-    # 发送邮件(SSL)
-    smtp = smtplib.SMTP_SSL(host=host, port=port)
-    # smtp = smtplib.SMTP(host=host, port=port)
+    LogConfigure.logging.info('开始发送邮件')
+
+    if port == 465:
+        # 测试使用,使用SSL,公司内部
+        smtp = smtplib.SMTP_SSL(host=host, port=port)
+    else:
+        # 线上运行,不使用SSL
+        smtp = smtplib.SMTP(host=host, port=port)
+
     smtp.login(username, password)
     smtp.sendmail(sender, receiver_list, msg.as_string())
     smtp.quit()
+    LogConfigure.logging.info('邮件发送成功')
 
 
 def select_last_report_folder(file_path):

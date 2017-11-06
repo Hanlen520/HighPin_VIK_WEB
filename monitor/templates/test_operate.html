@@ -71,7 +71,7 @@
                     $runTestAlert.html('<strong>Well done!</strong>测试执行完毕,请查看最新巡检报告.');
                 },
                 error:function(){
-                    $runTestAlert.html('<strong>Error!</strong>运行失败,请检查用例.').removeClass('alert-success').addClass('alert-danger');
+                    $runTestAlert.html('<strong>Error!</strong>运行失败,请检查用例和邮件配置.').removeClass('alert-success').addClass('alert-danger');
                 }
             });
         });

@@ -3,7 +3,6 @@ __author__ = 'Peng.Zhao'
 
 import os
 import datetime
-import subprocess
 from collections import OrderedDict
 from monitor.HighPin_VIK.VIKRunModule.VIKRunner import run_test
 from monitor.HighPin_VIK.WriteReportToDB import handle_model
@@ -66,7 +65,7 @@ def switch_host_for_linux(host_file_content):
     current_host_conf_file.writelines(host_file_content)
     current_host_conf_file.close()
     # 重启网络服务(调用Linux命令)
-    subprocess.call(['/etc/init.d/network', 'restart'])
+    # subprocess.call(['/etc/init.d/network', 'restart'])
 
 
 def create_report_folder(batch_run_time):
