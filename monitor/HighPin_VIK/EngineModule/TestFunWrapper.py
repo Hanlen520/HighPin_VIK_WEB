@@ -2,6 +2,7 @@
 
 __author__ = 'Peng.Zhao'
 
+import socket
 import requests
 import time
 import datetime
@@ -47,16 +48,19 @@ def test_wrapper_fun(self):
     # 将当前测试用例运行的数据放入monitor_request_status表中
     self.resp_status_list.append(resp_status)
 
+    # 获取当前host中的IP地址
+    # ip_address = socket.gethostbyname(resp_status['url'].split('/')[2])
+    # LogConfigure.logging.info('IP地址: {}'.format(ip_address))
     if resp.status_code == requests.codes.ok:
         # 显示请求的response(可注释掉)
         # LogConfigure.logging.info(resp_content.replace('\r\n', ''))
         # 加入验证方法
         VerifyFun.verify_function(self, resp_content)
-        LogConfigure.logging.info('验证接口: ' + self.title_list[self.__class__.index] + '--测试通过,返回状态码: ' + str(resp.status_code))
+        LogConfigure.logging.info('验证接口: {} --测试通过,返回状态码: {}'.format(self.title_list[self.__class__.index], str(resp.status_code)))
     else:
         resp_content = resp.content.decode('utf-8').strip()
-        LogConfigure.logging.info('验证接口: ' + self.title_list[self.__class__.index] + '--测试失败,返回状态码: ' + str(resp.status_code))
-        LogConfigure.logging.info('验证接口: ' + self.title_list[self.__class__.index] + '--请求返回: ' + resp_content)
+        LogConfigure.logging.info('验证接口: {} --测试失败,返回状态码: {}'.format(self.title_list[self.__class__.index], str(resp.status_code)))
+        LogConfigure.logging.info('验证接口: {} --请求返回: {}'.format(self.title_list[self.__class__.index], resp_content))
         resp.raise_for_status()
 
     # 如果返回值不为None,则执行关联参数的替换操作
