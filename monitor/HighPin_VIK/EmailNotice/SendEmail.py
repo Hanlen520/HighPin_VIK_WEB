@@ -32,6 +32,8 @@ def send_email_html_content(parse_info, host_check_status_dict):
     :param host_check_status_dict: 错误数量和通过数量
     :return:
     """
+    LogConfigure.logging.info('开始发送邮件')
+
     # 确定报告存放路径
     # report_folder_path = os.path.abspath('monitor/static/report')
     report_folder_path = os.path.join(os.path.abspath('.'), 'monitor', 'static', 'report')
@@ -87,8 +89,6 @@ def send_email_html_content(parse_info, host_check_status_dict):
     msg['to'] = receiver
     # 给多个人发送需要使用列表
     receiver_list = receiver.split(',')
-
-    LogConfigure.logging.info('开始发送邮件')
 
     if port == 465:
         # 测试使用,使用SSL,公司内部

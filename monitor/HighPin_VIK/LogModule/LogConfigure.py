@@ -9,7 +9,7 @@ import datetime
 now_time = datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
 filename = os.path.abspath('monitor/static/log/') + '/test_log_' + now_time + '.log'
 # log的配置信息
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.NOTSET,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
                     filename=filename,

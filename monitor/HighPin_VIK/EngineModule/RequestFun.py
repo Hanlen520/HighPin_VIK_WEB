@@ -18,6 +18,7 @@ def test_get_fun(test_case):
         json=test_case['json'],
         headers=test_case['headers'],
         cookies=test_case['cookies'],
+        allow_redirects=False,
         timeout=600
     )
     requests.session().close()
@@ -38,6 +39,7 @@ def test_post_fun(test_case):
         json=test_case['json'],
         headers=test_case['headers'],
         cookies=test_case['cookies'],
+        allow_redirects=False,
         timeout=600
     )
     requests.session().close()

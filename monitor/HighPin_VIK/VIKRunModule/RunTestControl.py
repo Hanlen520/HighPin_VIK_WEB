@@ -41,8 +41,8 @@ def read_host_file():
 def switch_host_for_windows(host_file_content):
     """
     :description: 切换Windows下的Hosts文件
-    :param host_file_content: 
-    :return: 
+    :param host_file_content:
+    :return:
     """
     # 读取当前Host文件
     current_host_conf_file = open('C:\Windows\System32\drivers\etc\hosts', 'w+')
@@ -50,13 +50,14 @@ def switch_host_for_windows(host_file_content):
     # 重写当前的Host文件
     current_host_conf_file.writelines(host_file_content)
     current_host_conf_file.close()
+    LogConfigure.logging.info('已经切换Windows的Host文件')
 
 
 def switch_host_for_linux(host_file_content):
     """
     :description: 切换Linux下的Hosts文件
-    :param host_file_content: 
-    :return: 
+    :param host_file_content:
+    :return:
     """
     # 读取当前Host文件
     current_host_conf_file = open('/etc/hosts', 'w+')
@@ -66,6 +67,7 @@ def switch_host_for_linux(host_file_content):
     current_host_conf_file.close()
     # 重启网络服务(调用Linux命令)
     # subprocess.call(['/etc/init.d/network', 'restart'])
+    LogConfigure.logging.info('已经切换Linux的Host文件')
 
 
 def create_report_folder(batch_run_time):
@@ -151,11 +153,11 @@ def run_test_control(host_dict):
         for host_key_ip, host_value_content in host_client_dict.items():
             # 筛选用例C_Client/H_Client/B_Client/W_Client/J_Client/M_Client,并运行测试(传递报告存放路径),前提条件是用例列表的长度不能为0
             if len(total_test_case_dict[host_key_client]) != 0:
-                LogConfigure.logging.info('切换Hosts: ' + host_key_ip)
                 # 切换Host-Linux
-                # switch_host_for_linux(host_client_dict[host_key_ip])
+                switch_host_for_linux(host_client_dict[host_key_ip])
                 # 切换Host-Windows
-                switch_host_for_windows(host_client_dict[host_key_ip])
+                # switch_host_for_windows(host_client_dict[host_key_ip])
+                LogConfigure.logging.info('切换Hosts: {}'.format(host_key_ip))
                 # 运行测试
                 host_check_dict = run_test(total_test_case_dict[host_key_client], save_report_path, host_key_ip)
                 # 测试用例归类
@@ -167,6 +169,7 @@ def run_test_control(host_dict):
                 if host_key_client == 'W_Client': host_client = 'W端'
                 if host_key_client == 'M_Client': host_client = 'M端'
 
+                # 统计超市个数和返回状态
                 total_timeout_num, class_resp_status_list = judge_time_out(host_check_dict)
 
                 # 将超时数量插入到邮件模板的数据结构当中
@@ -191,14 +194,15 @@ def run_test_control(host_dict):
 def run_multiple_test():
     """
     :description: 运行测试,并切换HOST,保存至数据库,发送邮件
-    :return: 
+    :return:
     """
     # 获取Host文件内容,以及Host文件名称
     host_dict = read_host_file()
     host_check_status_dict = run_test_control(host_dict)
     # 发送邮件
-    SendEmail.send_report(os.path.join(os.path.abspath('.'), 'monitor', 'HighPin_VIK', 'mail_configure.conf'),
-                          host_check_status_dict)
+    SendEmail.send_report(os.path.join(os.path.abspath('.'), 'monitor', 'HighPin_VIK', 'mail_configure.conf'), host_check_status_dict)
+    # 关闭日志记录,避免日志写入到一个文件中,下次运行时写入新的日志文件.
+    LogConfigure.logging.shutdown()
 
 
 if __name__ == '__main__':
