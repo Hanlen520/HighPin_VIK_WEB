@@ -201,8 +201,8 @@ def run_multiple_test():
     host_check_status_dict = run_test_control(host_dict)
     # 发送邮件
     SendEmail.send_report(os.path.join(os.path.abspath('.'), 'monitor', 'HighPin_VIK', 'mail_configure.conf'), host_check_status_dict)
-    # 关闭日志记录,避免日志写入到一个文件中,下次运行时写入新的日志文件.
-    LogConfigure.logging.shutdown()
+    # 移除日志Handler,避免日志写入到一个文件中,下次运行时写入新的日志文件.
+    LogConfigure.logging.getLogger('').removeHandler(LogConfigure.file_handler)
 
 
 if __name__ == '__main__':

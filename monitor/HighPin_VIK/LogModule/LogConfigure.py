@@ -16,13 +16,13 @@ logging.basicConfig(level=logging.NOTSET,
                     filemode='w')
 
 # 创建一个StreamHandler
-console = logging.StreamHandler()
+file_handler = logging.FileHandler(filename)
 # 将INFO级别以上的日志信息打印到控制台
-console.setLevel(logging.INFO)
+file_handler.setLevel(logging.INFO)
 # 设置打印到控制台的日志格式
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 # 加载格式
-console.setFormatter(formatter)
+file_handler.setFormatter(formatter)
 # 添加打印定向,将设置的日志打印到控制台
-logging.getLogger('').addHandler(console)
+logging.getLogger('').addHandler(file_handler)
 
