@@ -11,6 +11,7 @@ def create_mail_template(host_check_status_dict):
     j_status_list = host_check_status_dict['J_Client']
     w_status_list = host_check_status_dict['W_Client']
     m_status_list = host_check_status_dict['M_Client']
+    r_status_list = host_check_status_dict['R_Client']
 
     doc, tag, text = Doc().tagtext()
 
@@ -56,6 +57,11 @@ def create_mail_template(host_check_status_dict):
                                                       'height:40px;line-height:40px;font-size: 22px;padding-left: 20px;border-bottom:1px solid #d8d8d8;font-weight: bold;')):
                         text('M端')
                     create_server_table_template(tag, text, m_status_list)
+                with tag('tr'):
+                    with tag('td', ('colspan', '6'), ('style',
+                                                      'height:40px;line-height:40px;font-size: 22px;padding-left: 20px;border-bottom:1px solid #d8d8d8;font-weight: bold;')):
+                        text('R端')
+                    create_server_table_template(tag, text, r_status_list)
                 with tag('tr'):  # 空出一行
                     with tag('td', ('colspan', '6'), ('style',
                                                       'height:40px;line-height:40px;font-size: 22px;padding-left: 20px;border-bottom:1px solid #d8d8d8;font-weight: bold;')):

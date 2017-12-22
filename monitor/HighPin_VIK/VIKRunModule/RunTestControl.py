@@ -90,6 +90,7 @@ def compose_test_case():
     j_list = list()
     w_list = list()
     m_list = list()
+    r_list = list()
     for test_case_dict in total_test_list:
         for test_case_key, test_case_value in test_case_dict.items():
             # 判断用例属于哪个端,并把对应某端用例加入到对应列表中
@@ -105,6 +106,8 @@ def compose_test_case():
                 w_list.append(test_case_dict)
             if test_case_key.startswith('M端_'):
                 m_list.append(test_case_dict)
+            if test_case_key.startswith('R端_'):
+                r_list.append(test_case_dict)
     # 将列表合并成字典
     total_test_case_dict = dict()
     total_test_case_dict['C_Client'] = c_list
@@ -113,6 +116,7 @@ def compose_test_case():
     total_test_case_dict['J_Client'] = j_list
     total_test_case_dict['W_Client'] = w_list
     total_test_case_dict['M_Client'] = m_list
+    total_test_case_dict['R_Client'] = r_list
 
     return total_test_case_dict
 
@@ -168,6 +172,7 @@ def run_test_control(host_dict):
                 if host_key_client == 'J_Client': host_client = 'J端'
                 if host_key_client == 'W_Client': host_client = 'W端'
                 if host_key_client == 'M_Client': host_client = 'M端'
+                if host_key_client == 'R_Client': host_client = 'R端'
 
                 # 统计超市个数和返回状态
                 total_timeout_num, class_resp_status_list = judge_time_out(host_check_dict)

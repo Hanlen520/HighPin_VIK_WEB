@@ -64,6 +64,9 @@ def search_cookie(case_path):
                 if file.startswith('Test_M端'):
                     file_path = os.path.join(root, file)
                     modify_cookie(file_path, c_cookie, c_cookie_regex)
+                if file.startswith('Test_R端'):
+                    file_path = os.path.join(root, file)
+                    modify_cookie(file_path, h_cookie, h_cookie_regex)
 
 
 def modify_cookie(xml, new_cookie, cookie_regex):

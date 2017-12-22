@@ -23,6 +23,7 @@ def index(request):
     status_j_list = list()
     status_w_list = list()
     status_m_list = list()
+    status_r_list = list()
 
     get_last_item_sql = '''
                             SELECT *
@@ -113,6 +114,18 @@ def index(request):
                     'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
                                                                                                     "%H:%M:%S")
                 })
+            if report.report_comp == 'R端':
+                status_r_list.append({
+                    'report_id': report.id,
+                    'report_name': report.report_name,
+                    'host_ip': report.host_ip,
+                    'error_num': report.error_num,
+                    'time_out_num': report.time_out_num,
+                    'failure_num': report.failure_num,
+                    'pass_num': report.pass_num,
+                    'time': datetime.strftime(report.create_date, "%Y-%m-%d") + ' ' + time.strftime(report.create_time,
+                                                                                                    "%H:%M:%S")
+                })
     return render(request, template_name='index.html', context={
         'aggregate_id': aggregate_id,
         'status_c_list': status_c_list,
@@ -120,7 +133,8 @@ def index(request):
         'status_h_list': status_h_list,
         'status_j_list': status_j_list,
         'status_w_list': status_w_list,
-        'status_m_list': status_m_list
+        'status_m_list': status_m_list,
+        'status_r_list': status_r_list
     })
 
 
@@ -355,7 +369,7 @@ def agency_error_type(request):
         GROUP BY report.report_comp, item_error.error_type_flag;
     '''.format("'" + begin_date_str + "'", "'" + end_date_str + "'")
 
-    agency_list = ['B端', 'C端', 'H端', 'J端', 'W端', 'M端']
+    agency_list = ['B端', 'C端', 'H端', 'J端', 'W端', 'M端', 'R端']
     list_502 = [0] * 6
     list_404 = [0] * 6
     list_timeout = [0] * 6
